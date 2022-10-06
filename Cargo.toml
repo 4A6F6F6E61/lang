@@ -1,0 +1,14 @@
+[package]
+name = "lang"
+version = "0.1.0"
+edition = "2021"
+description = "Programming language that compiles to various languages"
+repository = "https://github.com/Zockedidock/lang"
+license = "MIT"
+
+[dependencies]
+indicatif = "0.17.1"
+colored = "2.0.0"
+num = "0.4.0"
+conv = "0.3.3"
+serde = {version = "1.0.145", features = ["derive"]}
