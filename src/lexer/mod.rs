@@ -47,8 +47,7 @@ pub struct Function {
 }
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct Loop {
-    pub lines: Vec<Line>,
-    pub tmp_lines: Vec<Vec<String>>,
+    pub id: i32,
 }
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct Let {

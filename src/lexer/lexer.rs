@@ -75,6 +75,8 @@ impl Lexer {
                 }
                 if temp_string.len() > 0 {
                     self.strings[i].push(temp_string);
+                } else {
+                    self.strings[i].push("".to_string());
                 }
             });
         } else {
@@ -118,6 +120,10 @@ impl Lexer {
                 let str = string_iter.next().unwrap();
                 match str.as_str() {
                     "fn" | "loop" => {
+                        self.brackets.braces = 0;
+                        self.brackets.round = 0;
+                        self.brackets.square = 0;
+                        log!(Info, "FUNCTION ----------------------------------------------------------------");
                         let mut loop_: bool = false;
                         if str.as_str() == "loop" {
                             loop_ = true;
@@ -193,7 +199,7 @@ impl Lexer {
                                         }
                                     }
                                 }
-
+                                dbg!(&args);
                                 if let Some(op_braces) = string_iter.next() {
                                     if op_braces != "{" {
                                         log!(LexerError, f("Expected opening braces but found `{op_braces}` at line {line_number}"));
@@ -209,6 +215,7 @@ impl Lexer {
                                                 line_iter.peek().unwrap().iter().peekable();
                                             while string_iter.peek().is_some() {
                                                 let current_string = string_iter.next().unwrap();
+                                                dbg!(current_string);
                                                 match current_string.as_str() {
                                                     "{" => {
                                                         line_iter.next();
@@ -255,18 +262,20 @@ impl Lexer {
                                                     _ => {
                                                         let temp =
                                                             line_iter.next().unwrap().to_owned();
-                                                        if temp.contains(&"{".to_string()) {
-                                                            self.brackets.braces += 1;
-                                                        }
                                                         fn_body.push(temp);
-                                                        string_iter = line_iter
-                                                            .peek()
-                                                            .unwrap()
-                                                            .iter()
-                                                            .peekable();
+                                                        if let Some(xx) = line_iter.peek() {
+                                                            string_iter = xx.iter().peekable();
+                                                        }
                                                     }
                                                 }
                                             }
+                                        }
+                                        if !function_parsed {
+                                            log!(
+                                                Error,
+                                                f("Unable to parse function at line {line_number}")
+                                            );
+                                            dbg!(&self.brackets.braces);
                                         }
                                     }
                                 } else {
@@ -338,14 +347,20 @@ impl Lexer {
         let mut as_string: String;
         let mut line_iter = code.iter().peekable();
         let mut line_number = start_ln;
+        log!(Info, f("{line_number}"));
         while line_iter.peek().is_some() {
             let mut tokens = vec![];
             line_number += 1;
             let next_line = line_iter.next().unwrap();
             as_string = next_line.join(" ");
+            log!(Info, f("{:?}", as_string));
+            if next_line.is_empty() {
+                continue;
+            }
             let mut string_iter = next_line.iter().peekable();
             while string_iter.peek().is_some() {
                 let string = string_iter.next().unwrap().as_str();
+                log!(Info, f("{string}"));
                 match string {
                     "let" => {
                         let syntax = || {
@@ -391,7 +406,7 @@ impl Lexer {
                             syntax();
                         } else {
                             if condition_v.is_empty() {
-                                log!(LexerError, f("Expected consition at line {line_number}"));
+                                log!(LexerError, f("Expected condition at line {line_number}"));
                                 syntax();
                             } else {
                                 tokens.push(Token::If(If {
@@ -405,6 +420,10 @@ impl Lexer {
                         tokens.push(Token::End(self.brackets.braces));
                         self.brackets.braces -= 1;
                     }
+                    // "}" => {
+                    //     tokens.push(Token::End(self.brackets.braces));
+                    //     self.brackets.braces -= 1;
+                    // }
                     "[" => {
                         tokens.push(Token::OpenSqBr(self.brackets.square));
                         self.brackets.square += 1;
@@ -424,6 +443,19 @@ impl Lexer {
                     "," => {
                         tokens.push(Token::Comma);
                     }
+                    "loop" => {
+                        if let Some(nt) = string_iter.next() {
+                            if nt == "{" {
+                                self.brackets.braces += 1;
+                                tokens.push(Token::Loop(Loop {
+                                    id: self.brackets.braces,
+                                }));
+                            } else {
+                                log!(LexerError, f("Expected `{{` at line {line_number}"));
+                            }
+                        }
+                    }
+                    "" => {}
                     _ => {
                         if let Some(nt) = string_iter.next() {
                             match nt.as_str() {
