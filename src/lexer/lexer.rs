@@ -2,7 +2,7 @@
 //use indicatif::{ProgressBar, ProgressState, ProgressStyle};
 //use std::fmt::Write;
 use {
-    crate::{lexer::*, log},
+    crate::{lexer::*, lexer_error, log, printx, PrintT},
     std::vec,
 };
 
@@ -63,7 +63,7 @@ impl Lexer {
                             }
                         }
                         '(' | ')' | '{' | '}' | '[' | ']' | ',' | '=' | '+' | '-' | '*' | '"'
-                        | '#' => {
+                        | '#' | '/' => {
                             if temp_string.len() > 0 {
                                 self.strings[i].push(temp_string);
                                 temp_string = String::new();
@@ -155,6 +155,45 @@ impl Lexer {
                                     }
                                     arguments.push(string_iter.next().unwrap().to_string());
                                 }
+
+                                let mut args: Vec<Arg> = vec![];
+                                let mut arg_iter = arguments.iter().peekable();
+                                while arg_iter.peek().is_some() {
+                                    let x = arg_iter.next().unwrap();
+                                    if x.is_empty() {
+                                        log!(
+                                            LexerError,
+                                            f("Expected argument `name` at line {line_number}")
+                                        );
+                                    } else {
+                                        let mut tmp = x.chars();
+                                        tmp.next_back();
+                                        let name = tmp.collect();
+                                        let mut type_ = String::new();
+                                        if !x.ends_with(":") {
+                                            log!(
+                                                LexerError,
+                                                f(
+                                                    "{:?} Expected `:` at line {line_number}",
+                                                    arg_iter.peek()
+                                                )
+                                            );
+                                        } else {
+                                            while arg_iter.peek() != Some(&&",".to_string())
+                                                && arg_iter.peek().is_some()
+                                            {
+                                                type_.push_str(arg_iter.next().unwrap());
+                                            }
+                                            if type_.is_empty() {
+                                                log!(LexerError, f("Expected argument `type` at line {line_number}"));
+                                            } else {
+                                                arg_iter.next();
+                                                args.push(Arg { name, type_ })
+                                            }
+                                        }
+                                    }
+                                }
+
                                 if let Some(op_braces) = string_iter.next() {
                                     if op_braces != "{" {
                                         log!(LexerError, f("Expected opening braces but found `{op_braces}` at line {line_number}"));
@@ -183,8 +222,10 @@ impl Lexer {
                                                                 self.tmp_ast.push(
                                                                     Token::LoopFunction(Function {
                                                                         name: fn_name.to_owned(),
-                                                                        arguments: arguments
-                                                                            .clone(),
+                                                                        arguments: args.clone(),
+                                                                        //TODO: detect return type
+                                                                        return_type: "void"
+                                                                            .to_string(),
                                                                         lines: vec![],
                                                                         tmp_lines: fn_body.clone(),
                                                                         start_ln: line_number,
@@ -195,8 +236,10 @@ impl Lexer {
                                                                 self.tmp_ast.push(Token::Function(
                                                                     Function {
                                                                         name: fn_name.to_owned(),
-                                                                        arguments: arguments
-                                                                            .clone(),
+                                                                        arguments: args.clone(),
+                                                                        //TODO: detect return type
+                                                                        return_type: "void"
+                                                                            .to_string(),
                                                                         lines: vec![],
                                                                         tmp_lines: fn_body.clone(),
                                                                         start_ln: line_number,
@@ -227,7 +270,10 @@ impl Lexer {
                                         }
                                     }
                                 } else {
-                                    log!(Error, f("Expected opening braces at line {line_number}"));
+                                    log!(
+                                        LexerError,
+                                        f("Expected opening braces at line {line_number}")
+                                    );
                                 }
                             }
                         } else {
@@ -235,10 +281,18 @@ impl Lexer {
                             syntax_fn();
                         }
                     }
-                    "#" => {
-                        log!(Lexer, f("{:?}", next_line));
-                        let comment = next_line.join(" ");
-                        self.tmp_ast.push(Token::Comment(comment));
+                    "/" => {
+                        if let Some(x) = string_iter.next() {
+                            if x == "/" {
+                                log!(Lexer, f("{:?}", next_line));
+                                let comment = next_line.join(" ");
+                                self.tmp_ast.push(Token::Comment(comment));
+                            } else {
+                                log!(LexerError, f("Expected `//` at line {line_number}"));
+                            }
+                        } else {
+                            log!(LexerError, f("Expected `//` at line {line_number}"));
+                        }
                     }
                     "const" | "global" => {
                         let syntax = || {
@@ -300,6 +354,7 @@ impl Lexer {
                         if let (Some(name), Some(equals), Some(value)) =
                             (string_iter.next(), string_iter.next(), string_iter.next())
                         {
+                            //TODO: Check for multidiemensional Array
                             if value.contains("[") && !value.contains("]") {
                                 log!(LexerError, f("Creating a multiline Array with the let binding is not supported. Line: {line_number}"));
                             } else if equals == "=" {

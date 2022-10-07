@@ -1,6 +1,6 @@
 //use indicatif::ProgressBar;
 use serde::{Deserialize, Serialize};
-pub mod lexer;
+mod lexer;
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub enum Token {
@@ -39,7 +39,8 @@ pub struct Line {
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct Function {
     pub name: String,
-    pub arguments: Vec<String>,
+    pub arguments: Vec<Arg>,
+    pub return_type: String,
     pub lines: Vec<Line>,
     pub tmp_lines: Vec<Vec<String>>,
     pub start_ln: i32,
@@ -58,6 +59,12 @@ pub struct Let {
 pub struct If {
     pub condition: String,
     pub id: i32,
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize)]
+pub struct Arg {
+    pub name: String,
+    pub type_: String,
 }
 
 // -----------------------------------------------------------------------

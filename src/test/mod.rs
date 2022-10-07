@@ -10,3 +10,11 @@ fn lexer_new() -> () {
     lexer.parse(code);
     println!("{:#?}", lexer.ast);
 }
+
+#[test]
+fn cxx() {
+    use crate::transpiler::Cxx;
+
+    let mut cxx = Cxx::new();
+    cxx.run("./testing.lang");
+}

@@ -3,6 +3,10 @@
 use colored::Colorize;
 use std::cell::RefCell;
 
+pub mod lexer;
+mod test;
+pub mod transpiler;
+
 thread_local! {
     pub static LEXER_ERROR_COUNT: RefCell<usize> = RefCell::new(0usize);
 }
@@ -20,16 +24,21 @@ pub enum PrintT {
     Info,
     Cpu,
     Clear,
+    CXX,
 }
 
 pub fn printx(type_: PrintT, message: &str) {
     let prefix = match type_ {
         PrintT::Error => format!("[Error]: ").red(),
         PrintT::Info => format!("[Info]: ").green(),
+        PrintT::Syntax => format!("[Syntax]: ").yellow(),
         PrintT::Lexer => format!("[Lexer]: ").blue(),
         PrintT::Cpu => format!("[Cpu]: ").yellow(),
-        PrintT::Syntax => format!("[Syntax]: ").yellow(),
         PrintT::Clear => "".to_string().white(),
+        // --------------
+        // languages
+        // --------------
+        PrintT::CXX => format!("[CXX]: ").yellow(),
     };
     match type_ {
         PrintT::Clear => {
@@ -43,51 +52,41 @@ pub fn printx(type_: PrintT, message: &str) {
 #[macro_export]
 macro_rules! log {
     (Error, f($($format:tt)*)) => {
-        use crate::lib::{printx, PrintT};
         printx(PrintT::Error, format!($($format)*).as_str());
     };
     (Error, $($str:tt)*) => {
-        //use crate::cpu::{printx, PrintT};
         printx(PrintT::Error, $($str)*);
     };
     (LexerError, f($($format:tt)*)) => {
-        use crate::lib::{printx, PrintT, lexer_error};
         printx(PrintT::Error, format!($($format)*).as_str());
         lexer_error();
     };
     (LexerError, $($str:tt)*) => {
-        use crate::lib::{printx, PrintT, lexer_error};
         printx(PrintT::Error, $($str)*);
         lexer_error();
     };
     (Info, f($($format:tt)*)) => {
-        use crate::lib::{printx, PrintT};
         printx(PrintT::Info, format!($($format)*).as_str());
     };
     (Info, $($str:tt)*) => {
         printx(PrintT::Info, $($str)*);
     };
     (Lexer, f($($format:tt)*)) => {
-        use crate::lib::{printx, PrintT};
         printx(PrintT::Lexer, format!($($format)*).as_str());
     };
     (Lexer, $($str:tt)*) => {
-        use crate::lib::{printx, PrintT};
         printx(PrintT::Lexer, $($str)*);
     };
     (Cpu, f($($format:tt)*)) => {
         printx(PrintT::Cpu, format!($($format)*).as_str());
     };
     (Cpu, $($str:tt)*) => {
-        use crate::lib::{printx, PrintT};
         printx(PrintT::Cpu, $($str)*);
     };
     (Syntax, f($($format:tt)*)) => {
-        use crate::lib::{printx, PrintT};
         printx(PrintT::Syntax, format!($($format)*).as_str());
     };
     (Syntax, $($str:tt)*) => {
-        use crate::lib::{printx, PrintT};
         printx(PrintT::Syntax, $($str)*);
     };
     (Clear, f($($format:tt)*)) => {
@@ -95,5 +94,12 @@ macro_rules! log {
     };
     (Clear, $($str:tt)*) => {
         printx(PrintT::Clear, $($str)*);
+    };
+    (CXX, f($($format:tt)*)) => {
+        printx(PrintT::CXX, format!($($format)*).as_str());
+    };
+    (CXX, $($str:tt)*) => {
+
+        printx(PrintT::CXX, $($str)*);
     };
 }
