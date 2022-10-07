@@ -4,12 +4,12 @@ const ctest = 20
 fn main(test: args) {
     let test = 10
     let idk = 1
-    if test then
+    if test {
         let ifidk = 69
-        if test2 and test then
+        if test2 and test {
             let idk2 = 99
-        end
-    end
+        }
+    }
 }
 // test test test test
 loop fn main(test: args, test2: string) {

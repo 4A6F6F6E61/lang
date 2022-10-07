@@ -44,7 +44,10 @@ impl Cxx {
                     self.buffer.push_str(&format!("auto {name} = {value};\n"));
                 }
                 Token::Function(x) => {
-                    self.function(x);
+                    self.function(x, false);
+                }
+                Token::LoopFunction(x) => {
+                    self.function(x, true);
                 }
                 _ => {
                     log!(Error, "unexpected Token");
@@ -52,9 +55,28 @@ impl Cxx {
             }
         }
     }
-    fn function(&mut self, x: &Function) {
+    fn function(&mut self, x: &Function, loop_: bool) {
         // TODO: Handle Arguemnt Return types
-        let (_name, _arguments, _return_type) =
+        let (name, arguments, return_type) =
             (x.name.clone(), x.arguments.clone(), x.return_type.clone());
+
+        let mut args_v = vec![];
+
+        for arg in arguments {
+            args_v.push(format!("{} {}", arg.type_, arg.name));
+        }
+
+        let args = args_v.join(", ");
+
+        self.buffer
+            .push_str(&format!("{return_type} {name} ({args})\n{{\n"));
+        if loop_ {
+            self.buffer.push_str("while (1) {\n");
+        }
+        if loop_ {
+            self.buffer.push_str("}\n}\n");
+        } else {
+            self.buffer.push_str("}\n");
+        }
     }
 }

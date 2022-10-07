@@ -13,8 +13,9 @@ fn lexer_new() -> () {
 
 #[test]
 fn cxx() {
-    use crate::transpiler::Cxx;
+    use crate::{log, printx, transpiler::Cxx, PrintT};
 
     let mut cxx = Cxx::new();
     cxx.run("./testing.lang");
+    log!(Info, f("\n{}", cxx.buffer));
 }

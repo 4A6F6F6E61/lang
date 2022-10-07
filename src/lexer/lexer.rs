@@ -199,7 +199,6 @@ impl Lexer {
                                         }
                                     }
                                 }
-                                dbg!(&args);
                                 if let Some(op_braces) = string_iter.next() {
                                     if op_braces != "{" {
                                         log!(LexerError, f("Expected opening braces but found `{op_braces}` at line {line_number}"));
@@ -212,17 +211,16 @@ impl Lexer {
                                                 break;
                                             }
                                             string_iter =
-                                                line_iter.peek().unwrap().iter().peekable();
+                                                line_iter.next().unwrap().iter().peekable();
+                                            let mut temp = vec![];
                                             while string_iter.peek().is_some() {
                                                 let current_string = string_iter.next().unwrap();
-                                                dbg!(current_string);
                                                 match current_string.as_str() {
                                                     "{" => {
-                                                        line_iter.next();
                                                         self.brackets.braces += 1;
+                                                        temp.push("{".to_string());
                                                     }
                                                     "}" => {
-                                                        line_iter.next();
                                                         self.brackets.braces -= 1;
                                                         if self.brackets.braces == 0 {
                                                             if loop_ {
@@ -260,22 +258,17 @@ impl Lexer {
                                                         }
                                                     }
                                                     _ => {
-                                                        let temp =
-                                                            line_iter.next().unwrap().to_owned();
-                                                        fn_body.push(temp);
-                                                        if let Some(xx) = line_iter.peek() {
-                                                            string_iter = xx.iter().peekable();
-                                                        }
+                                                        temp.push(current_string.to_owned());
                                                     }
                                                 }
                                             }
+                                            fn_body.push(temp);
                                         }
                                         if !function_parsed {
                                             log!(
                                                 Error,
                                                 f("Unable to parse function at line {line_number}")
                                             );
-                                            dbg!(&self.brackets.braces);
                                         }
                                     }
                                 } else {
@@ -388,13 +381,13 @@ impl Lexer {
                     }
                     "if" => {
                         let syntax = || {
-                            log!(Syntax, "\nif `condition` then\n   `code`\nend");
+                            log!(Syntax, "\nif `condition` {\n   `code`\n}");
                         };
                         let mut condition_v: Vec<String> = vec![];
                         let mut then: bool = false;
                         while string_iter.peek().is_some() {
                             let nt = string_iter.next().unwrap();
-                            if nt == "then" {
+                            if nt == "{" {
                                 then = true;
                                 self.brackets.braces += 1;
                                 break;
@@ -402,7 +395,7 @@ impl Lexer {
                             condition_v.push(nt.to_owned());
                         }
                         if !then {
-                            log!(LexerError, f("Expected then at line {line_number}"));
+                            log!(LexerError, f("Expected `{{` at line {line_number}"));
                             syntax();
                         } else {
                             if condition_v.is_empty() {
@@ -416,14 +409,10 @@ impl Lexer {
                             }
                         }
                     }
-                    "end" => {
+                    "}" => {
                         tokens.push(Token::End(self.brackets.braces));
                         self.brackets.braces -= 1;
                     }
-                    // "}" => {
-                    //     tokens.push(Token::End(self.brackets.braces));
-                    //     self.brackets.braces -= 1;
-                    // }
                     "[" => {
                         tokens.push(Token::OpenSqBr(self.brackets.square));
                         self.brackets.square += 1;
