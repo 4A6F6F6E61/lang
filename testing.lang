@@ -12,7 +12,7 @@ fn main(test: args) {
     }
 }
 // test test test test
-loop fn main(test: args, test2: string) {
+loop fn main_two(test: args, test2: string) {
     loop {
         a cool
     }

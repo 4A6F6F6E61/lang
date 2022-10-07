@@ -73,6 +73,9 @@ impl Cxx {
         if loop_ {
             self.buffer.push_str("while (1) {\n");
         }
+
+        // Code
+
         if loop_ {
             self.buffer.push_str("}\n}\n");
         } else {
