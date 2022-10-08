@@ -1,0 +1,3 @@
+const test = 69
+fn main(): int {
+}

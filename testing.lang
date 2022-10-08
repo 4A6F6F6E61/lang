@@ -1,19 +1,25 @@
+#include <iostream>
+
 global gtest = 10
 const ctest = 20
 
-fn main(test: args) {
-    let test = 10
+fn print(msg: int): void {
+    std::cout << msg << std::endl
+}
+
+fn main(): int {
+    let test = true
     let idk = 1
     if test {
         let ifidk = 69
-        if test2 and test {
+        if test {
             let idk2 = 99
         }
     }
 }
 // test test test test
-loop fn main_two(test: args, test2: string) {
-    loop {
-        a cool
-    }
-}
+//loop fn main_two(test: args, test2: string) {
+//    loop {
+//        a cool
+//    }
+//}

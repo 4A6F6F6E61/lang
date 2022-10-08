@@ -21,10 +21,14 @@ pub enum Token {
     CloseSqBr(i32),
     OpenRoBr(i32),
     CloseRoBr(i32),
+    CImport(String),
+    Line(Vec<Token>),
+    Operator(Operator),
     Stack,
     Accumulator,
     Comma,
-    Generic,
+    Generic(String),
+    Empty,
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
@@ -64,6 +68,17 @@ pub struct If {
 pub struct Arg {
     pub name: String,
     pub type_: String,
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize)]
+pub enum Operator {
+    BitShiftRight,
+    BitShiftLeft,
+    Plus,
+    Minus,
+    Mul,
+    Div,
+    Equals,
 }
 
 // -----------------------------------------------------------------------

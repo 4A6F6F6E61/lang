@@ -1,7 +1,7 @@
 #![allow(dead_code)]
 
 use crate::{
-    lexer::{Function, Lexer, Token},
+    lexer::{Function, Lexer, Operator, Token},
     log, printx,
     transpiler::Cxx,
     PrintT,
@@ -49,14 +49,18 @@ impl Cxx {
                 Token::LoopFunction(x) => {
                     self.function(x, true);
                 }
+                Token::CImport(ci) => {
+                    self.buffer.push_str(&format!("{ci}\n"));
+                }
+                Token::Comment(_) => {}
                 _ => {
-                    log!(Error, "unexpected Token");
+                    log!(Error, f("unexpected Token"));
+                    dbg!(&nt);
                 }
             }
         }
     }
     fn function(&mut self, x: &Function, loop_: bool) {
-        // TODO: Handle Arguemnt Return types
         let (name, arguments, return_type) =
             (x.name.clone(), x.arguments.clone(), x.return_type.clone());
 
@@ -71,13 +75,72 @@ impl Cxx {
         self.buffer
             .push_str(&format!("{return_type} {name} ({args})\n{{\n"));
         if loop_ {
-            self.buffer.push_str("while (1) {\n");
+            self.buffer.push_str("do {\n");
         }
 
-        // Code
+        for line in x.lines.clone() {
+            let mut token_iter = line.tokens.iter().peekable();
+            let mut semic = false;
+            while token_iter.peek().is_some() {
+                let token = token_iter.next().unwrap();
+                match token {
+                    Token::If(_if) => {
+                        let condition = &_if.condition;
+                        self.buffer.push_str(&format!("if ({condition})\n{{\n"));
+                    }
+                    Token::Var(_var) => {
+                        let (name, value) = (&_var.name, &_var.value);
+                        self.buffer.push_str(&format!("auto {name} = {value};\n"));
+                    }
+                    Token::End(_) => {
+                        self.buffer.push_str("}\n");
+                    }
+                    Token::Empty => {
+                        self.buffer.push_str("\n");
+                    }
+                    Token::Generic(s) => {
+                        self.buffer.push_str(&format!("{s} "));
+                        semic = true;
+                    }
+                    Token::Operator(o) => {
+                        match o {
+                            Operator::Plus => {
+                                self.buffer.push_str(&format!("+ "));
+                            }
+                            Operator::Minus => {
+                                self.buffer.push_str(&format!("- "));
+                            }
+                            Operator::Mul => {
+                                self.buffer.push_str(&format!("* "));
+                            }
+                            Operator::Div => {
+                                self.buffer.push_str(&format!("/ "));
+                            }
+                            Operator::BitShiftLeft => {
+                                self.buffer.push_str(&format!("<< "));
+                            }
+                            Operator::BitShiftRight => {
+                                self.buffer.push_str(&format!(">> "));
+                            }
+                            Operator::Equals => {
+                                self.buffer.push_str(&format!("= "));
+                            }
+                        }
+                        semic = true;
+                    }
+                    _ => {
+                        log!(Error, "Unexpected Token");
+                        dbg!(&token);
+                    }
+                }
+            }
+            if semic {
+                self.buffer.push_str(";\n");
+            }
+        }
 
         if loop_ {
-            self.buffer.push_str("}\n}\n");
+            self.buffer.push_str("} while (1);\n}\n");
         } else {
             self.buffer.push_str("}\n");
         }

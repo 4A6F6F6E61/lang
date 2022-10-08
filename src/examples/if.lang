@@ -1,0 +1,6 @@
+fn main(): int {
+    let test = true
+    if test {
+        test = false
+    }
+}
