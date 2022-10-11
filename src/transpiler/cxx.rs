@@ -1,7 +1,10 @@
 #![allow(dead_code)]
 
 use crate::{
-    lexer::{Function, Lexer, Operator, Token},
+    lexer::{
+        token::{Function, Operator},
+        Lexer, Token,
+    },
     log, printx,
     transpiler::Cxx,
     PrintT,
@@ -105,27 +108,35 @@ impl Cxx {
                     Token::Operator(o) => {
                         match o {
                             Operator::Plus => {
-                                self.buffer.push_str(&format!("+ "));
+                                self.buffer.push_str(&format!("+"));
                             }
                             Operator::Minus => {
-                                self.buffer.push_str(&format!("- "));
+                                self.buffer.push_str(&format!("-"));
                             }
                             Operator::Mul => {
-                                self.buffer.push_str(&format!("* "));
+                                self.buffer.push_str(&format!("*"));
                             }
                             Operator::Div => {
-                                self.buffer.push_str(&format!("/ "));
+                                self.buffer.push_str(&format!("/"));
                             }
                             Operator::BitShiftLeft => {
-                                self.buffer.push_str(&format!("<< "));
+                                self.buffer.push_str(&format!("<<"));
                             }
                             Operator::BitShiftRight => {
-                                self.buffer.push_str(&format!(">> "));
+                                self.buffer.push_str(&format!(">>"));
                             }
                             Operator::Equals => {
-                                self.buffer.push_str(&format!("= "));
+                                self.buffer.push_str(&format!("="));
                             }
                         }
+                        semic = true;
+                    }
+                    Token::OpenRoBr(_) => {
+                        self.buffer.push_str(&format!("("));
+                        semic = true;
+                    }
+                    Token::CloseRoBr(_) => {
+                        self.buffer.push_str(&format!(")"));
                         semic = true;
                     }
                     _ => {

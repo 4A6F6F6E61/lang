@@ -16,6 +16,7 @@ fn main(): int {
             let idk2 = 99
         }
     }
+    print(idk)
 }
 // test test test test
 //loop fn main_two(test: args, test2: string) {

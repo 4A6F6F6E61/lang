@@ -3,6 +3,7 @@
 //use std::fmt::Write;
 use {
     crate::{lexer::*, lexer_error, log, printx, PrintT},
+    rand::Rng,
     std::vec,
 };
 
@@ -103,13 +104,19 @@ impl Lexer {
     // Parsing
     // --------------------------------
     pub fn parse(&mut self, code: String) {
+        use super::token::*;
+        let mut rng = rand::thread_rng();
         self.top_level(code);
 
         for node in self.tmp_ast.clone() {
             match node {
                 Token::Function(func) => {
                     let f = Token::Function(Function {
-                        lines: self.low_level(func.tmp_lines.clone(), func.start_ln.clone()),
+                        lines: self.low_level(
+                            func.tmp_lines.clone(),
+                            func.start_ln.clone(),
+                            rng.gen_range(0..=i32::MAX),
+                        ),
                         ..func
                     });
                     self.ast.push(f);
@@ -122,6 +129,7 @@ impl Lexer {
         if self.brackets.braces > 0 {}
     }
     pub fn top_level(&mut self, code: String) {
+        use super::token::*;
         self.generate_strings(code); // generates a 2D string vector
                                      // ------------------------------
                                      // This is for toplevel only
@@ -386,7 +394,8 @@ impl Lexer {
         // ------------------------------
     }
 
-    pub fn low_level(&mut self, code: Vec<Vec<String>>, start_ln: i32) -> Vec<Line> {
+    pub fn low_level(&mut self, code: Vec<Vec<String>>, start_ln: i32, id: i32) -> Vec<Line> {
+        use super::token::*;
         let mut lines = vec![];
         let mut as_string: String;
         let mut line_iter = code.iter().peekable();
@@ -450,31 +459,32 @@ impl Lexer {
                                 log!(LexerError, f("Expected condition at line {line_number}"));
                                 syntax();
                             } else {
-                                tokens.push(Token::If(If {
-                                    condition: condition_v.join(" "),
-                                    id: self.brackets.braces,
-                                }));
+                                tokens.push(Token::If(If::new(
+                                    condition_v.join(" "),
+                                    id,
+                                    self.brackets.braces,
+                                )));
                             }
                         }
                     }
                     "}" => {
-                        tokens.push(Token::End(self.brackets.braces));
+                        tokens.push(Token::End(Br::new(id, self.brackets.braces)));
                         self.brackets.braces -= 1;
                     }
                     "[" => {
-                        tokens.push(Token::OpenSqBr(self.brackets.square));
+                        tokens.push(Token::OpenSqBr(Br::new(id, self.brackets.square)));
                         self.brackets.square += 1;
                     }
                     "]" => {
-                        tokens.push(Token::OpenSqBr(self.brackets.square));
+                        tokens.push(Token::OpenSqBr(Br::new(id, self.brackets.square)));
                         self.brackets.square -= 1;
                     }
                     "(" => {
-                        tokens.push(Token::OpenRoBr(self.brackets.round));
+                        tokens.push(Token::OpenRoBr(Br::new(id, self.brackets.round)));
                         self.brackets.round += 1;
                     }
                     ")" => {
-                        tokens.push(Token::OpenRoBr(self.brackets.round));
+                        tokens.push(Token::CloseRoBr(Br::new(id, self.brackets.round)));
                         self.brackets.round -= 1;
                     }
                     "," => {
