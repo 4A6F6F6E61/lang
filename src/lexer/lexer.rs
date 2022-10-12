@@ -553,7 +553,7 @@ impl Lexer {
                     }
                     "" => {}
                     "yield" => {
-                        if let Some(nt) = string_iter.peek() {
+                        if let Some(_) = string_iter.peek() {
                             let mut expression = vec![];
                             while string_iter.peek().is_some() {
                                 let next = string_iter.next().unwrap();
@@ -584,7 +584,7 @@ impl Lexer {
         lines
     }
 
-    pub fn expression(&mut self, strings: Vec<String>, line_number: i32) -> token::Expression {
+    pub fn expression(&mut self, strings: Vec<String>, _line_number: i32) -> token::Expression {
         let mut expression = vec![];
 
         use super::token::expression::*;
@@ -609,7 +609,7 @@ impl Lexer {
                 ">>" => {
                     expression.push(Token::Operator(Operator::BitShiftRight));
                 }
-                "=" => {
+                "==" => {
                     expression.push(Token::Operator(Operator::Equals));
                 }
                 "|>" => {

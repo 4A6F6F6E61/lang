@@ -2,7 +2,7 @@
 
 use crate::{
     lexer::{
-        token::{Function, Operator},
+        token::{expression::Operator, Expression, Function},
         Lexer, Token,
     },
     log, printx,
@@ -88,8 +88,13 @@ impl Cxx {
                 let token = token_iter.next().unwrap();
                 match token {
                     Token::If(_if) => {
-                        let condition = &_if.condition;
+                        let condition = self.expression(_if.condition.clone());
                         self.buffer.push_str(&format!("if ({condition})\n{{\n"));
+                    }
+                    Token::ElseIf(_if) => {
+                        let condition = self.expression(_if.condition.clone());
+                        self.buffer
+                            .push_str(&format!("else if ({condition})\n{{\n"));
                     }
                     Token::Var(_var) => {
                         let (name, value) = (&_var.name, &_var.value);
@@ -98,37 +103,14 @@ impl Cxx {
                     Token::End(_) => {
                         self.buffer.push_str("}\n");
                     }
+                    Token::Else(_) => {
+                        self.buffer.push_str("else{\n");
+                    }
                     Token::Empty => {
                         self.buffer.push_str("\n");
                     }
                     Token::Generic(s) => {
                         self.buffer.push_str(&format!("{s} "));
-                        semic = true;
-                    }
-                    Token::Operator(o) => {
-                        match o {
-                            Operator::Plus => {
-                                self.buffer.push_str(&format!("+"));
-                            }
-                            Operator::Minus => {
-                                self.buffer.push_str(&format!("-"));
-                            }
-                            Operator::Mul => {
-                                self.buffer.push_str(&format!("*"));
-                            }
-                            Operator::Div => {
-                                self.buffer.push_str(&format!("/"));
-                            }
-                            Operator::BitShiftLeft => {
-                                self.buffer.push_str(&format!("<<"));
-                            }
-                            Operator::BitShiftRight => {
-                                self.buffer.push_str(&format!(">>"));
-                            }
-                            Operator::Equals => {
-                                self.buffer.push_str(&format!("="));
-                            }
-                        }
                         semic = true;
                     }
                     Token::OpenRoBr(_) => {
@@ -155,5 +137,58 @@ impl Cxx {
         } else {
             self.buffer.push_str("}\n");
         }
+    }
+
+    fn expression(&mut self, exp: Expression) -> String {
+        let mut string = String::new();
+        for x in exp {
+            match x {
+                Token::Operator(o) => match o {
+                    Operator::Plus => {
+                        self.buffer.push_str(&format!("+"));
+                    }
+                    Operator::Minus => {
+                        self.buffer.push_str(&format!("-"));
+                    }
+                    Operator::Mul => {
+                        self.buffer.push_str(&format!("*"));
+                    }
+                    Operator::Div => {
+                        self.buffer.push_str(&format!("/"));
+                    }
+                    Operator::BitShiftLeft => {
+                        self.buffer.push_str(&format!("<<"));
+                    }
+                    Operator::BitShiftRight => {
+                        self.buffer.push_str(&format!(">>"));
+                    }
+                    Operator::Equals => {
+                        self.buffer.push_str(&format!("=="));
+                    }
+                    Operator::And => {
+                        self.buffer.push_str(&format!("&&"));
+                    }
+                    Operator::Or => {
+                        self.buffer.push_str(&format!("||"));
+                    }
+                    Operator::BitAnd => {
+                        self.buffer.push_str(&format!("&"));
+                    }
+                    Operator::BitOr => {
+                        self.buffer.push_str(&format!("|"));
+                    }
+                    Operator::Pipe => {
+                        log!(CXX, "Operator::Pipe : not yet implemented");
+                    }
+                },
+                Token::ExpVal(s) => {
+                    self.buffer.push_str(&s);
+                }
+                _ => {
+                    log!(Error, "Unexpected token in Expression");
+                }
+            }
+        }
+        string
     }
 }
