@@ -460,11 +460,60 @@ impl Lexer {
                                 syntax();
                             } else {
                                 tokens.push(Token::If(If::new(
-                                    condition_v.join(" "),
+                                    self.expression(condition_v, line_number),
                                     id,
                                     self.brackets.braces,
                                 )));
                             }
+                        }
+                    }
+                    "else" => {
+                        if let Some(nt) = string_iter.next() {
+                            match nt.as_str() {
+                                "if" => {
+                                    let syntax = || {
+                                        log!(Syntax, "\n} else if `condition` {\n   `code`\n}");
+                                    };
+                                    let mut condition_v: Vec<String> = vec![];
+                                    let mut then: bool = false;
+                                    while string_iter.peek().is_some() {
+                                        let nt = string_iter.next().unwrap();
+                                        if nt == "{" {
+                                            then = true;
+                                            self.brackets.braces += 1;
+                                            break;
+                                        }
+                                        condition_v.push(nt.to_owned());
+                                    }
+                                    if !then {
+                                        log!(LexerError, f("Expected `{{` at line {line_number}"));
+                                        syntax();
+                                    } else {
+                                        if condition_v.is_empty() {
+                                            log!(
+                                                LexerError,
+                                                f("Expected condition at line {line_number}")
+                                            );
+                                            syntax();
+                                        } else {
+                                            tokens.push(Token::ElseIf(If::new(
+                                                self.expression(condition_v, line_number),
+                                                id,
+                                                self.brackets.braces,
+                                            )));
+                                        }
+                                    }
+                                }
+                                "{" => {
+                                    tokens.push(Token::Else(Else::new(id, self.brackets.braces)));
+                                    self.brackets.braces += 1;
+                                }
+                                _ => {
+                                    log!(LexerError, f("Expected `{{` or `if` but found {nt} at line {line_number}"));
+                                }
+                            }
+                        } else {
+                            log!(LexerError, f("Expected `{{` or `if` at line {line_number}"));
                         }
                     }
                     "}" => {
@@ -503,29 +552,30 @@ impl Lexer {
                         }
                     }
                     "" => {}
-                    "+" => {
-                        tokens.push(Token::Operator(Operator::Plus));
-                    }
-                    "-" => {
-                        tokens.push(Token::Operator(Operator::Minus));
-                    }
-                    "*" => {
-                        tokens.push(Token::Operator(Operator::Mul));
-                    }
-                    "/" => {
-                        tokens.push(Token::Operator(Operator::Div));
-                    }
-                    "<<" => {
-                        tokens.push(Token::Operator(Operator::BitShiftLeft));
-                    }
-                    ">>" => {
-                        tokens.push(Token::Operator(Operator::BitShiftRight));
-                    }
-                    "=" => {
-                        tokens.push(Token::Operator(Operator::Equals));
+                    "yield" => {
+                        if let Some(nt) = string_iter.peek() {
+                            let mut expression = vec![];
+                            while string_iter.peek().is_some() {
+                                let next = string_iter.next().unwrap();
+                                expression.push(next.to_owned());
+                            }
+                            tokens.push(Token::Yield(self.expression(expression, line_number)));
+                        } else {
+                            log!(
+                                LexerError,
+                                f("Expected expression after `yield` at line {line_number}")
+                            );
+                        }
                     }
                     _ => {
-                        tokens.push(Token::Generic(String::from(string)));
+                        if let Some(nt) = string_iter.peek() {
+                            match nt.as_str() {
+                                "" => {}
+                                _ => {
+                                    tokens.push(Token::Generic(String::from(string)));
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -534,5 +584,55 @@ impl Lexer {
         lines
     }
 
-    pub fn parse_line() {}
+    pub fn expression(&mut self, strings: Vec<String>, line_number: i32) -> token::Expression {
+        let mut expression = vec![];
+
+        use super::token::expression::*;
+
+        for string in strings {
+            match string.as_str() {
+                "+" => {
+                    expression.push(Token::Operator(Operator::Plus));
+                }
+                "-" => {
+                    expression.push(Token::Operator(Operator::Minus));
+                }
+                "*" => {
+                    expression.push(Token::Operator(Operator::Mul));
+                }
+                "/" => {
+                    expression.push(Token::Operator(Operator::Div));
+                }
+                "<<" => {
+                    expression.push(Token::Operator(Operator::BitShiftLeft));
+                }
+                ">>" => {
+                    expression.push(Token::Operator(Operator::BitShiftRight));
+                }
+                "=" => {
+                    expression.push(Token::Operator(Operator::Equals));
+                }
+                "|>" => {
+                    expression.push(Token::Operator(Operator::Pipe));
+                }
+                "|" => {
+                    expression.push(Token::Operator(Operator::BitOr));
+                }
+                "&" => {
+                    expression.push(Token::Operator(Operator::BitAnd));
+                }
+                "||" => {
+                    expression.push(Token::Operator(Operator::Or));
+                }
+                "&&" => {
+                    expression.push(Token::Operator(Operator::And));
+                }
+                _ => {
+                    expression.push(Token::ExpVal(string));
+                }
+            }
+        }
+
+        expression
+    }
 }

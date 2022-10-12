@@ -4,17 +4,15 @@ mod lexer;
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub enum Token {
+    /**
+     * Standard Tokens
+     */
     Function(token::Function),
     LoopFunction(token::Function),
     Loop(token::Loop),
     Const(token::Let),
     Global(token::Let),
     Var(token::Let),
-    Number(i64),
-    String(String),
-    OpCode(String),
-    Port(String),
-    Comment(String),
     If(token::If),
     Else(token::Else),
     ElseIf(token::If),
@@ -23,14 +21,28 @@ pub enum Token {
     CloseSqBr(token::Br),
     OpenRoBr(token::Br),
     CloseRoBr(token::Br),
+    /**
+     * Standard Types
+     */
+    Number(i64),
+    String(String),
+    OpCode(String),
+    Port(String),
+    Comment(String),
     CImport(String),
-    Line(Vec<Token>),
-    Operator(token::Operator),
     Generic(String),
-    Stack,
-    Accumulator,
+    Yield(token::Expression),
+    Line(Vec<Token>),
+    /**
+     * Expression Tokens
+     */
+    Expression(token::Expression),
+    Operator(token::expression::Operator),
+    ExpVal(String),
+    /**
+     * Other
+     */
     Comma,
-    Yield,
     Empty,
 }
 
@@ -45,6 +57,8 @@ pub struct Line {
 // -----------------------------------------------------------------------
 pub mod token {
     use serde::{Deserialize, Serialize};
+
+    use super::Token;
     #[derive(Clone, Debug, Deserialize, Serialize)]
     pub struct Function {
         pub name: String,
@@ -65,12 +79,12 @@ pub mod token {
     }
     #[derive(Clone, Debug, Deserialize, Serialize)]
     pub struct If {
-        pub condition: String,
+        pub condition: Expression,
         pub id: i32,
         pub level: i32,
     }
     impl If {
-        pub fn new(condition: String, id: i32, level: i32) -> Self {
+        pub fn new(condition: Expression, id: i32, level: i32) -> Self {
             Self {
                 condition,
                 level,
@@ -113,16 +127,26 @@ pub mod token {
         pub type_: String,
     }
 
-    #[derive(Clone, Debug, Deserialize, Serialize)]
-    pub enum Operator {
-        BitShiftRight,
-        BitShiftLeft,
-        Plus,
-        Minus,
-        Mul,
-        Div,
-        Equals,
+    pub mod expression {
+        use serde::{Deserialize, Serialize};
+        #[derive(Clone, Debug, Deserialize, Serialize)]
+        pub enum Operator {
+            BitShiftRight,
+            BitShiftLeft,
+            And,
+            Or,
+            BitAnd,
+            BitOr,
+            Plus,
+            Minus,
+            Mul,
+            Div,
+            Equals,
+            Pipe,
+        }
     }
+
+    pub type Expression = Vec<Token>;
 }
 // -----------------------------------------------------------------------
 // Lexer structs
