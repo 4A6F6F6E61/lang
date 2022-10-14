@@ -25,7 +25,7 @@ impl Cxx {
         let mut lexer = Lexer::new();
         if let Ok(code) = read_to_string(file) {
             lexer.parse(code);
-            dbg!(&lexer.ast);
+            //dbg!(&lexer.ast);
             self.transpile(lexer.ast);
         } else {
             log!(CXX, "Unable to read file");

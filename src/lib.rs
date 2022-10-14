@@ -24,6 +24,7 @@ pub enum PrintT {
     Info,
     Cpu,
     Clear,
+    Test,
     CXX,
 }
 
@@ -34,6 +35,7 @@ pub fn printx(type_: PrintT, message: &str) {
         PrintT::Syntax => format!("[Syntax]: ").yellow(),
         PrintT::Lexer => format!("[Lexer]: ").blue(),
         PrintT::Cpu => format!("[Cpu]: ").yellow(),
+        PrintT::Test => format!("[Test]: ").yellow(),
         PrintT::Clear => "".to_string().white(),
         // --------------
         // languages
@@ -101,5 +103,12 @@ macro_rules! log {
     (CXX, $($str:tt)*) => {
 
         printx(PrintT::CXX, $($str)*);
+    };
+    (Test, f($($format:tt)*)) => {
+        printx(PrintT::Test, format!($($format)*).as_str());
+    };
+    (Test, $($str:tt)*) => {
+
+        printx(PrintT::Test, $($str)*);
     };
 }
