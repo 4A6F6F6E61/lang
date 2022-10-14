@@ -4,7 +4,7 @@
 use {
     crate::{lexer::*, lexer_error, log, printx, PrintT},
     rand::Rng,
-    std::vec,
+    std::{vec},
 };
 
 // -----------------------------------------------------------------------
@@ -347,20 +347,28 @@ impl Lexer {
                                 log!(Syntax, "global `name` = `value`");
                             }
                         };
-                        if let (Some(name), Some(equals), Some(value)) =
-                            (string_iter.next(), string_iter.next(), string_iter.next())
+                        if let (Some(name), Some(equals)) =
+                            (string_iter.next(), string_iter.next())
                         {
+                            //TODO: Check for multidiemensional Array
                             if equals == "=" {
-                                if str == "const" {
-                                    self.tmp_ast.push(Token::Const(Let {
-                                        name: name.to_owned(),
-                                        value: value.to_owned(),
-                                    }))
+                                let expression: Vec<&String> = string_iter.clone().collect();
+                                while string_iter.peek().is_some() { string_iter.next(); };
+                                if expression.contains(&&"[".to_string()) && !expression.contains(&&"]".to_string()) {
+                                    log!(LexerError, f("Creating a multiline Array with the let binding is not supported. Line: {line_number}"));
                                 } else {
-                                    self.tmp_ast.push(Token::Global(Let {
-                                        name: name.to_owned(),
-                                        value: value.to_owned(),
-                                    }))
+                                    let exp = generate_expression(expression, line_number);
+                                    if str == "const" {
+                                        self.tmp_ast.push(Token::Const(Let {
+                                            name: name.to_owned(),
+                                            exp,
+                                        }));
+                                    } else {
+                                        self.tmp_ast.push(Token::Global(Let {
+                                            name: name.to_owned(),
+                                            exp,
+                                        }));
+                                    }
                                 }
                             } else {
                                 log!(LexerError, f("Expected `=` at line {line_number}"));
@@ -414,19 +422,23 @@ impl Lexer {
                 match string {
                     "let" => {
                         let syntax = || {
-                            log!(Syntax, "let `name` = `value`");
+                            log!(Syntax, "let `name` = `expression`");
                         };
-                        if let (Some(name), Some(equals), Some(value)) =
-                            (string_iter.next(), string_iter.next(), string_iter.next())
+                        if let (Some(name), Some(equals)) =
+                            (string_iter.next(), string_iter.next())
                         {
                             //TODO: Check for multidiemensional Array
-                            if value.contains("[") && !value.contains("]") {
-                                log!(LexerError, f("Creating a multiline Array with the let binding is not supported. Line: {line_number}"));
-                            } else if equals == "=" {
-                                tokens.push(Token::Var(Let {
-                                    name: name.to_owned(),
-                                    value: value.to_owned(),
-                                }))
+                            if equals == "=" {
+                                let expression: Vec<&String> = string_iter.clone().collect();
+                                while string_iter.peek().is_some() { string_iter.next(); };
+                                if expression.contains(&&"[".to_string()) && !expression.contains(&&"]".to_string()) {
+                                    log!(LexerError, f("Creating a multiline Array with the let binding is not supported. Line: {line_number}"));
+                                } else {
+                                    tokens.push(Token::Var(Let {
+                                        name: name.to_owned(),
+                                        exp: generate_expression(expression, line_number),
+                                    }));
+                                }
                             } else {
                                 log!(LexerError, f("Expected `=` at line {line_number}"));
                                 syntax();
@@ -440,7 +452,7 @@ impl Lexer {
                         let syntax = || {
                             log!(Syntax, "\nif `condition` {\n   `code`\n}");
                         };
-                        let mut condition_v: Vec<String> = vec![];
+                        let mut condition_v: Vec<&String> = vec![];
                         let mut then: bool = false;
                         while string_iter.peek().is_some() {
                             let nt = string_iter.next().unwrap();
@@ -449,7 +461,7 @@ impl Lexer {
                                 self.brackets.braces += 1;
                                 break;
                             }
-                            condition_v.push(nt.to_owned());
+                            condition_v.push(nt);
                         }
                         if !then {
                             log!(LexerError, f("Expected `{{` at line {line_number}"));
@@ -460,7 +472,7 @@ impl Lexer {
                                 syntax();
                             } else {
                                 tokens.push(Token::If(If::new(
-                                    self.expression(condition_v, line_number),
+                                    generate_expression(condition_v, line_number),
                                     id,
                                     self.brackets.braces,
                                 )));
@@ -474,7 +486,7 @@ impl Lexer {
                                     let syntax = || {
                                         log!(Syntax, "\n} else if `condition` {\n   `code`\n}");
                                     };
-                                    let mut condition_v: Vec<String> = vec![];
+                                    let mut condition_v: Vec<&String> = vec![];
                                     let mut then: bool = false;
                                     while string_iter.peek().is_some() {
                                         let nt = string_iter.next().unwrap();
@@ -483,7 +495,7 @@ impl Lexer {
                                             self.brackets.braces += 1;
                                             break;
                                         }
-                                        condition_v.push(nt.to_owned());
+                                        condition_v.push(nt);
                                     }
                                     if !then {
                                         log!(LexerError, f("Expected `{{` at line {line_number}"));
@@ -497,7 +509,7 @@ impl Lexer {
                                             syntax();
                                         } else {
                                             tokens.push(Token::ElseIf(If::new(
-                                                self.expression(condition_v, line_number),
+                                                generate_expression(condition_v, line_number),
                                                 id,
                                                 self.brackets.braces,
                                             )));
@@ -554,12 +566,9 @@ impl Lexer {
                     "" => {}
                     "yield" => {
                         if let Some(_) = string_iter.peek() {
-                            let mut expression = vec![];
-                            while string_iter.peek().is_some() {
-                                let next = string_iter.next().unwrap();
-                                expression.push(next.to_owned());
-                            }
-                            tokens.push(Token::Yield(self.expression(expression, line_number)));
+                            let exp = string_iter.clone().collect();
+                            while string_iter.peek().is_some() { string_iter.next(); };
+                            tokens.push(Token::Yield(generate_expression(exp, line_number)));
                         } else {
                             log!(
                                 LexerError,
@@ -567,10 +576,37 @@ impl Lexer {
                             );
                         }
                     }
+                    "return" => {
+                        if let Some(_) = string_iter.peek() {
+                            let exp = string_iter.clone().collect();
+                            while string_iter.peek().is_some() { string_iter.next(); };
+                            tokens.push(Token::Return(generate_expression(exp, line_number)));
+                        } else {
+                            log!(
+                                    LexerError,
+                            f("Expected expression after `return` at line {line_number}")
+                            );
+                        }
+                    }
                     _ => {
                         if let Some(nt) = string_iter.peek() {
                             match nt.as_str() {
-                                "" => {}
+                                "=" => {
+                                    string_iter.next();
+                                    if let Some(_) = string_iter.peek() {
+                                        let exp = string_iter.clone().collect();
+                                        while string_iter.peek().is_some() { string_iter.next(); };
+                                        tokens.push(Token::Assign(token::Assign {
+                                            var: string.to_owned(),
+                                            exp: generate_expression(exp, line_number),
+                                        }));
+                                    } else {
+                                        log!(
+                                                LexerError,
+                                        f("Expected expression after assignment at line {line_number}")
+                                        );
+                                    }
+                                }
                                 _ => {
                                     tokens.push(Token::Generic(String::from(string)));
                                 }
@@ -583,56 +619,56 @@ impl Lexer {
         }
         lines
     }
+}
 
-    pub fn expression(&mut self, strings: Vec<String>, _line_number: i32) -> token::Expression {
-        let mut expression = vec![];
+pub fn generate_expression(strings: Vec<&String>, _line_number: i32) -> token::Expression {
+    let mut expression = vec![];
 
-        use super::token::expression::*;
+    use super::token::expression::*;
 
-        for string in strings {
-            match string.as_str() {
-                "+" => {
-                    expression.push(Token::Operator(Operator::Plus));
-                }
-                "-" => {
-                    expression.push(Token::Operator(Operator::Minus));
-                }
-                "*" => {
-                    expression.push(Token::Operator(Operator::Mul));
-                }
-                "/" => {
-                    expression.push(Token::Operator(Operator::Div));
-                }
-                "<<" => {
-                    expression.push(Token::Operator(Operator::BitShiftLeft));
-                }
-                ">>" => {
-                    expression.push(Token::Operator(Operator::BitShiftRight));
-                }
-                "==" => {
-                    expression.push(Token::Operator(Operator::Equals));
-                }
-                "|>" => {
-                    expression.push(Token::Operator(Operator::Pipe));
-                }
-                "|" => {
-                    expression.push(Token::Operator(Operator::BitOr));
-                }
-                "&" => {
-                    expression.push(Token::Operator(Operator::BitAnd));
-                }
-                "||" => {
-                    expression.push(Token::Operator(Operator::Or));
-                }
-                "&&" => {
-                    expression.push(Token::Operator(Operator::And));
-                }
-                _ => {
-                    expression.push(Token::ExpVal(string));
-                }
+    for string in strings {
+        match string.as_str() {
+            "+" => {
+                expression.push(Token::Operator(Operator::Plus));
+            }
+            "-" => {
+                expression.push(Token::Operator(Operator::Minus));
+            }
+            "*" => {
+                expression.push(Token::Operator(Operator::Mul));
+            }
+            "/" => {
+                expression.push(Token::Operator(Operator::Div));
+            }
+            "<<" => {
+                expression.push(Token::Operator(Operator::BitShiftLeft));
+            }
+            ">>" => {
+                expression.push(Token::Operator(Operator::BitShiftRight));
+            }
+            "==" => {
+                expression.push(Token::Operator(Operator::Equals));
+            }
+            "|>" => {
+                expression.push(Token::Operator(Operator::Pipe));
+            }
+            "|" => {
+                expression.push(Token::Operator(Operator::BitOr));
+            }
+            "&" => {
+                expression.push(Token::Operator(Operator::BitAnd));
+            }
+            "||" => {
+                expression.push(Token::Operator(Operator::Or));
+            }
+            "&&" => {
+                expression.push(Token::Operator(Operator::And));
+            }
+            _ => {
+                expression.push(Token::ExpVal(string.to_owned()));
             }
         }
-
-        expression
     }
+
+    expression
 }

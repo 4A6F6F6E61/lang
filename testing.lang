@@ -17,6 +17,7 @@ fn main(): int {
         }
     }
     print(idk)
+    test = 10 * 9
 }
 // test test test test
 //loop fn main_two(test: args, test2: string) {

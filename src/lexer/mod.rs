@@ -21,6 +21,9 @@ pub enum Token {
     CloseSqBr(token::Br),
     OpenRoBr(token::Br),
     CloseRoBr(token::Br),
+    Yield(token::Expression),
+    Assign(token::Assign),
+    Return(token::Expression),
     /**
      * Standard Types
      */
@@ -31,7 +34,6 @@ pub enum Token {
     Comment(String),
     CImport(String),
     Generic(String),
-    Yield(token::Expression),
     Line(Vec<Token>),
     /**
      * Expression Tokens
@@ -75,7 +77,7 @@ pub mod token {
     #[derive(Clone, Debug, Deserialize, Serialize)]
     pub struct Let {
         pub name: String,
-        pub value: String,
+        pub exp: Expression,
     }
     #[derive(Clone, Debug, Deserialize, Serialize)]
     pub struct If {
@@ -125,6 +127,12 @@ pub mod token {
     pub struct Arg {
         pub name: String,
         pub type_: String,
+    }
+
+    #[derive(Clone, Debug, Deserialize, Serialize)]
+    pub struct Assign {
+        pub var: String,
+        pub exp: Expression,
     }
 
     pub mod expression {

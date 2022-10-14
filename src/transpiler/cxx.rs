@@ -38,13 +38,13 @@ impl Cxx {
             let nt = ast_iter.next().unwrap();
             match nt {
                 Token::Const(x) => {
-                    let (name, value) = (x.name.clone(), x.value.clone());
+                    let (name, exp) = (x.name.clone(), x.exp.clone());
                     self.buffer
-                        .push_str(&format!("const auto {name} = {value};\n"));
+                        .push_str(&format!("const auto {name} = {};\n", CXX_expression(exp)));
                 }
                 Token::Global(x) => {
-                    let (name, value) = (x.name.clone(), x.value.clone());
-                    self.buffer.push_str(&format!("auto {name} = {value};\n"));
+                    let (name, exp) = (x.name.clone(), x.exp.clone());
+                    self.buffer.push_str(&format!("auto {name} = {};\n", CXX_expression(exp)));
                 }
                 Token::Function(x) => {
                     self.function(x, false);
@@ -88,17 +88,28 @@ impl Cxx {
                 let token = token_iter.next().unwrap();
                 match token {
                     Token::If(_if) => {
-                        let condition = self.expression(_if.condition.clone());
+                        let condition = CXX_expression(_if.condition.clone());
                         self.buffer.push_str(&format!("if ({condition})\n{{\n"));
                     }
                     Token::ElseIf(_if) => {
-                        let condition = self.expression(_if.condition.clone());
+                        let condition = CXX_expression(_if.condition.clone());
                         self.buffer
                             .push_str(&format!("else if ({condition})\n{{\n"));
                     }
+                    Token::Assign(_assign) => {
+                        let name = _assign.var.clone();
+                        let exp = CXX_expression(_assign.exp.clone());
+                        self.buffer
+                            .push_str(&format!("{name} = {exp};\n"));
+                    }
+                    Token::Return(_return) => {
+                        let exp = CXX_expression(_return.clone());
+                        self.buffer
+                            .push_str(&format!("return {exp};\n"));
+                    }
                     Token::Var(_var) => {
-                        let (name, value) = (&_var.name, &_var.value);
-                        self.buffer.push_str(&format!("auto {name} = {value};\n"));
+                        let (name, exp) = (&_var.name, _var.exp.clone());
+                        self.buffer.push_str(&format!("auto {name} = {};\n", CXX_expression(exp)));
                     }
                     Token::End(_) => {
                         self.buffer.push_str("}\n");
@@ -138,57 +149,58 @@ impl Cxx {
             self.buffer.push_str("}\n");
         }
     }
+}
 
-    fn expression(&mut self, exp: Expression) -> String {
-        let mut string = String::new();
-        for x in exp {
-            match x {
-                Token::Operator(o) => match o {
-                    Operator::Plus => {
-                        self.buffer.push_str(&format!("+"));
-                    }
-                    Operator::Minus => {
-                        self.buffer.push_str(&format!("-"));
-                    }
-                    Operator::Mul => {
-                        self.buffer.push_str(&format!("*"));
-                    }
-                    Operator::Div => {
-                        self.buffer.push_str(&format!("/"));
-                    }
-                    Operator::BitShiftLeft => {
-                        self.buffer.push_str(&format!("<<"));
-                    }
-                    Operator::BitShiftRight => {
-                        self.buffer.push_str(&format!(">>"));
-                    }
-                    Operator::Equals => {
-                        self.buffer.push_str(&format!("=="));
-                    }
-                    Operator::And => {
-                        self.buffer.push_str(&format!("&&"));
-                    }
-                    Operator::Or => {
-                        self.buffer.push_str(&format!("||"));
-                    }
-                    Operator::BitAnd => {
-                        self.buffer.push_str(&format!("&"));
-                    }
-                    Operator::BitOr => {
-                        self.buffer.push_str(&format!("|"));
-                    }
-                    Operator::Pipe => {
-                        log!(CXX, "Operator::Pipe : not yet implemented");
-                    }
-                },
-                Token::ExpVal(s) => {
-                    self.buffer.push_str(&s);
+#[allow(non_snake_case)]
+fn CXX_expression(exp: Expression) -> String {
+    let mut string = String::new();
+    for x in exp {
+        match x {
+            Token::Operator(o) => match o {
+                Operator::Plus => {
+                    string.push_str(&format!("+"));
                 }
-                _ => {
-                    log!(Error, "Unexpected token in Expression");
+                Operator::Minus => {
+                    string.push_str(&format!("-"));
                 }
+                Operator::Mul => {
+                    string.push_str(&format!("*"));
+                }
+                Operator::Div => {
+                    string.push_str(&format!("/"));
+                }
+                Operator::BitShiftLeft => {
+                    string.push_str(&format!("<<"));
+                }
+                Operator::BitShiftRight => {
+                    string.push_str(&format!(">>"));
+                }
+                Operator::Equals => {
+                    string.push_str(&format!("=="));
+                }
+                Operator::And => {
+                    string.push_str(&format!("&&"));
+                }
+                Operator::Or => {
+                    string.push_str(&format!("||"));
+                }
+                Operator::BitAnd => {
+                    string.push_str(&format!("&"));
+                }
+                Operator::BitOr => {
+                    string.push_str(&format!("|"));
+                }
+                Operator::Pipe => {
+                    log!(CXX, "Operator::Pipe : not yet implemented");
+                }
+            },
+            Token::ExpVal(s) => {
+                string.push_str(&s);
+            }
+            _ => {
+                log!(Error, "Unexpected token in Expression");
             }
         }
-        string
     }
+    string
 }

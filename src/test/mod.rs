@@ -31,7 +31,7 @@ mod syntax {
             cxx.buffer.trim(),
             "int main ()
 {
-return 0 ;
+return 0;
 }"
         );
     }
@@ -49,7 +49,7 @@ return 0 ;
 auto test = true;
 if (test)
 {
-test =false ;
+test = false;
 }
 }"
         );
@@ -112,6 +112,22 @@ int main ()
             "const auto test = 69;
 int main ()
 {
+}"
+        );
+    }
+
+    #[test]
+    fn test_expression() {
+        use crate::{log, printx, transpiler::Cxx, PrintT};
+
+        let mut cxx = Cxx::new();
+        cxx.run("./src/examples/expression.lang");
+        log!(Info, f("\n{}", cxx.buffer));
+        assert_eq!(
+                cxx.buffer.trim(),
+        "int main ()
+{
+auto test = 10*9;
 }"
         );
     }
