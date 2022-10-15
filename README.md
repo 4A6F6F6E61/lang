@@ -5,5 +5,6 @@ WIP language that compiles to various programming languages like CXX (in the fut
 ## Planned features
 
 - [ ] Generator functions
-- [ ] match nt in non keyword token (lowlevel)
+    - [X] function declaration with `gen fn [name]([args]): [return] {}`
+    - [ ] yield keyword
 - [ ] more transpiler targets
