@@ -9,6 +9,7 @@ pub enum Token {
      */
     Function(token::Function),
     LoopFunction(token::Function),
+    GeneratorFunction(token::Function),
     Loop(token::Loop),
     Const(token::Let),
     Global(token::Let),
@@ -52,6 +53,13 @@ pub enum Token {
 pub struct Line {
     pub tokens: Vec<Token>,
     pub as_string: String,
+}
+
+#[derive(Clone, Debug)]
+pub enum FunctionType {
+    Function,
+    Loop,
+    Generator,
 }
 
 // -----------------------------------------------------------------------

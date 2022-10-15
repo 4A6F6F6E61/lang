@@ -136,6 +136,7 @@ impl Lexer {
                                      // ------------------------------
         let mut line_iter = self.strings.iter().peekable();
         let mut line_number = 0;
+        let mut fn_type = FunctionType::Function;
         while line_iter.peek().is_some() {
             line_number += 1;
             let next_line = line_iter.next().unwrap();
@@ -143,17 +144,28 @@ impl Lexer {
             while string_iter.peek().is_some() {
                 let str = string_iter.next().unwrap();
                 match str.as_str() {
-                    "fn" | "loop" => {
+                    "loop" => {
+                        fn_type = FunctionType::Loop;
+                    }
+                    "gen" => {
+                        fn_type = FunctionType::Generator;
+                    }
+                    "fn" => {
                         self.brackets.braces = 0;
                         self.brackets.round = 0;
                         self.brackets.square = 0;
-                        let mut loop_: bool = false;
-                        if str.as_str() == "loop" {
-                            loop_ = true;
-                            string_iter.next();
-                        }
                         let syntax_fn = || {
-                            log!(Syntax, "\nfn `name` (`arguments`) {\n`code`\n}");
+                            match fn_type {
+                                FunctionType::Function => {
+                                    log!(Syntax, "\nfn `name` (`arguments`) {\n`code`\n}");
+                                }
+                                FunctionType::Loop => {
+                                    log!(Syntax, "\nloop fn `name` (`arguments`) {\n`code`\n}");
+                                }
+                                FunctionType::Generator => {
+                                    log!(Syntax, "\ngen fn `name` (`arguments`) {\n`code`\n}");
+                                }
+                            }
                         };
                         if let (Some(fn_name), Some(fn_op_br)) =
                             (string_iter.next(), string_iter.next())
@@ -276,33 +288,51 @@ impl Lexer {
                                                     "}" => {
                                                         self.brackets.braces -= 1;
                                                         if self.brackets.braces == 0 {
-                                                            if loop_ {
-                                                                self.tmp_ast.push(
-                                                                    Token::LoopFunction(Function {
-                                                                        name: fn_name.to_owned(),
-                                                                        arguments: args.clone(),
-                                                                        return_type: return_type
+                                                            match fn_type {
+                                                                FunctionType::Function=> {
+                                                                    self.tmp_ast.push(
+                                                                        Token::Function(Function {
+                                                                            name: fn_name.to_owned(),
+                                                                            arguments: args.clone(),
+                                                                            return_type: return_type
+                                                                                .clone(),
+                                                                            lines: vec![],
+                                                                            tmp_lines: fn_body.clone(),
+                                                                            start_ln: line_number,
+                                                                        })
+                                                                    );
+                                                                    function_parsed = true;
+                                                                }
+                                                                FunctionType::Loop => {
+                                                                    self.tmp_ast.push(
+                                                                        Token::LoopFunction(Function {
+                                                                            name: fn_name.to_owned(),
+                                                                            arguments: args.clone(),
+                                                                            return_type: return_type
                                                                             .clone(),
-                                                                        lines: vec![],
-                                                                        tmp_lines: fn_body.clone(),
-                                                                        start_ln: line_number,
-                                                                    }),
-                                                                );
-                                                                function_parsed = true;
-                                                            } else {
-                                                                self.tmp_ast.push(Token::Function(
-                                                                    Function {
-                                                                        name: fn_name.to_owned(),
-                                                                        arguments: args.clone(),
-                                                                        return_type: return_type
+                                                                            lines: vec![],
+                                                                            tmp_lines: fn_body.clone(),
+                                                                            start_ln: line_number,
+                                                                        })
+                                                                    );
+                                                                    function_parsed = true;
+                                                                }
+                                                                FunctionType::Generator => {
+                                                                    self.tmp_ast.push(
+                                                                        Token::GeneratorFunction(Function {
+                                                                            name: fn_name.to_owned(),
+                                                                            arguments: args.clone(),
+                                                                            return_type: return_type
                                                                             .clone(),
-                                                                        lines: vec![],
-                                                                        tmp_lines: fn_body.clone(),
-                                                                        start_ln: line_number,
-                                                                    },
-                                                                ));
-                                                                function_parsed = true;
+                                                                            lines: vec![],
+                                                                            tmp_lines: fn_body.clone(),
+                                                                            start_ln: line_number,
+                                                                        })
+                                                                    );
+                                                                    function_parsed = true;
+                                                                }
                                                             }
+                                                            fn_type = FunctionType::Function;
                                                             break;
                                                         } else {
                                                             fn_body.push(vec!["}".to_string()]);
@@ -602,8 +632,8 @@ impl Lexer {
                                         }));
                                     } else {
                                         log!(
-                                                LexerError,
-                                        f("Expected expression after assignment at line {line_number}")
+                                            LexerError,
+                                            f("Expected expression after assignment at line {line_number}")
                                         );
                                     }
                                 }
@@ -611,6 +641,8 @@ impl Lexer {
                                     tokens.push(Token::Generic(String::from(string)));
                                 }
                             }
+                        } else {
+                            tokens.push(Token::Generic(String::from(string)));
                         }
                     }
                 }

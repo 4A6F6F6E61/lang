@@ -1,9 +1,9 @@
 #![cfg(test)]
 
 mod general {
+    use crate::lexer::Lexer;
     #[test]
     fn lexer_new() -> () {
-        use crate::lexer::Lexer;
         use std::fs::read_to_string;
 
         let mut lexer = Lexer::new();
