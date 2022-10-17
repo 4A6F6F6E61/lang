@@ -3,7 +3,7 @@
 use crate::{
     lexer::{
         token::{expression::Operator, Expression, Function},
-        Lexer, Token,
+        FunctionType, Lexer, Token,
     },
     log, printx,
     transpiler::Cxx,
@@ -15,6 +15,7 @@ impl Cxx {
     pub fn new() -> Self {
         Self {
             buffer: String::new(),
+            imports: vec![],
         }
     }
 
@@ -44,16 +45,27 @@ impl Cxx {
                 }
                 Token::Global(x) => {
                     let (name, exp) = (x.name.clone(), x.exp.clone());
-                    self.buffer.push_str(&format!("auto {name} = {};\n", CXX_expression(exp)));
+                    self.buffer
+                        .push_str(&format!("auto {name} = {};\n", CXX_expression(exp)));
                 }
                 Token::Function(x) => {
-                    self.function(x, false);
+                    self.function(x, FunctionType::Function);
                 }
                 Token::LoopFunction(x) => {
-                    self.function(x, true);
+                    self.function(x, FunctionType::Loop);
+                }
+                Token::GeneratorFunction(x) => {
+                    if !self.imports.contains(&"vector".to_string()) {
+                        self.imports.push("vector".to_string());
+                        self.buffer.push_str("#include <vector>\n\n");
+                    }
+                    self.function(x, FunctionType::Generator);
                 }
                 Token::CImport(ci) => {
-                    self.buffer.push_str(&format!("{ci}\n"));
+                    if !self.imports.contains(ci) {
+                        self.buffer.push_str(&format!("#include {ci}\n"));
+                        self.imports.push(ci.to_owned());
+                    }
                 }
                 Token::Comment(_) => {}
                 _ => {
@@ -63,8 +75,8 @@ impl Cxx {
             }
         }
     }
-    fn function(&mut self, x: &Function, loop_: bool) {
-        let (name, arguments, return_type) =
+    fn function(&mut self, x: &Function, type_: FunctionType) {
+        let (name, arguments, mut return_type) =
             (x.name.clone(), x.arguments.clone(), x.return_type.clone());
 
         let mut args_v = vec![];
@@ -75,11 +87,19 @@ impl Cxx {
 
         let args = args_v.join(", ");
 
+        if type_ == FunctionType::Generator {
+            return_type = format!("std::vector<{return_type}>");
+        }
+
         self.buffer
             .push_str(&format!("{return_type} {name} ({args})\n{{\n"));
-        if loop_ {
-            self.buffer.push_str("do {\n");
+
+        match type_ {
+            FunctionType::Loop => self.buffer.push_str("do {\n"),
+            FunctionType::Generator => self.buffer.push_str("std::vector<int> dfjfjfdjfndjfnjd;\n"),
+            _ => {}
         }
+        dbg!(&x.lines);
 
         for line in x.lines.clone() {
             let mut token_iter = line.tokens.iter().peekable();
@@ -99,17 +119,21 @@ impl Cxx {
                     Token::Assign(_assign) => {
                         let name = _assign.var.clone();
                         let exp = CXX_expression(_assign.exp.clone());
-                        self.buffer
-                            .push_str(&format!("{name} = {exp};\n"));
+                        self.buffer.push_str(&format!("{name} = {exp};\n"));
                     }
                     Token::Return(_return) => {
                         let exp = CXX_expression(_return.clone());
+                        self.buffer.push_str(&format!("return {exp};\n"));
+                    }
+                    Token::Yield(_yield) => {
+                        let exp = CXX_expression(_yield.clone());
                         self.buffer
-                            .push_str(&format!("return {exp};\n"));
+                            .push_str(&format!("dfjfjfdjfndjfnjd.push_back({exp});\n"));
                     }
                     Token::Var(_var) => {
                         let (name, exp) = (&_var.name, _var.exp.clone());
-                        self.buffer.push_str(&format!("auto {name} = {};\n", CXX_expression(exp)));
+                        self.buffer
+                            .push_str(&format!("auto {name} = {};\n", CXX_expression(exp)));
                     }
                     Token::End(_) => {
                         self.buffer.push_str("}\n");
@@ -143,10 +167,10 @@ impl Cxx {
             }
         }
 
-        if loop_ {
-            self.buffer.push_str("} while (1);\n}\n");
-        } else {
-            self.buffer.push_str("}\n");
+        match type_ {
+            FunctionType::Loop => self.buffer.push_str("} while (1);\n}\n"),
+            FunctionType::Function => self.buffer.push_str("}\n"),
+            FunctionType::Generator => self.buffer.push_str("return dfjfjfdjfndjfnjd;\n}\n"),
         }
     }
 }

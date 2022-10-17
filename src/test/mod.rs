@@ -7,7 +7,8 @@ mod general {
         use std::fs::read_to_string;
 
         let mut lexer = Lexer::new();
-        let code = read_to_string("./testing.lang").expect("Should have been able to read the file");
+        let code =
+            read_to_string("./testing.lang").expect("Should have been able to read the file");
         lexer.parse(code);
         println!("{:#?}", lexer.ast);
     }
@@ -23,7 +24,7 @@ mod general {
 }
 
 mod cxx {
-    use crate::test::{test_cxx};
+    use crate::test::test_cxx;
     #[test]
     fn expression() {
         test_cxx("expression");
@@ -52,12 +53,19 @@ mod cxx {
     fn function() {
         test_cxx("main");
     }
+    #[test]
+    fn generator() {
+        test_cxx("generator");
+    }
 }
-use {std::{fs::read_to_string, path::Path}, crate::{log, printx, PrintT, transpiler::Cxx}};
+use {
+    crate::{log, printx, transpiler::Cxx, PrintT},
+    std::{fs::read_to_string, path::Path},
+};
 
 pub fn load_file<P>(file: P) -> Option<String>
 where
-P: AsRef<Path>,
+    P: AsRef<Path>,
 {
     let mut out = String::new();
     if let Ok(code) = read_to_string(file) {
@@ -76,6 +84,7 @@ fn test_cxx(test: &str) {
     cxx.run(&format!("./src/examples/{test}.lang"));
     let mut code1 = String::from(cxx.buffer.trim());
     code1.push_str("\n");
+    log!(Info, f("\n{code1}"));
     if let Some(code2) = load_file(&format!("./src/examples/out/cxx/{test}.cxx")) {
         assert_eq!(code1, code2);
     }

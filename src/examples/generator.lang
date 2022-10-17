@@ -1,0 +1,13 @@
+gen fn test(): int {
+    if true {
+        yield 10
+        yield 10 * 6 + 9
+    } else {
+        yield 9 + 10
+    }
+}
+
+fn main(): int {
+    let temp = test()
+    return 0
+}

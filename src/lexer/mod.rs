@@ -55,7 +55,7 @@ pub struct Line {
     pub as_string: String,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum FunctionType {
     Function,
     Loop,

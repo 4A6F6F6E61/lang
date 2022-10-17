@@ -4,7 +4,7 @@
 use {
     crate::{lexer::*, lexer_error, log, printx, PrintT},
     rand::Rng,
-    std::{vec},
+    std::vec,
 };
 
 // -----------------------------------------------------------------------
@@ -121,6 +121,28 @@ impl Lexer {
                     });
                     self.ast.push(f);
                 }
+                Token::LoopFunction(func) => {
+                    let f = Token::LoopFunction(Function {
+                        lines: self.low_level(
+                            func.tmp_lines.clone(),
+                            func.start_ln.clone(),
+                            rng.gen_range(0..=i32::MAX),
+                        ),
+                        ..func
+                    });
+                    self.ast.push(f);
+                }
+                Token::GeneratorFunction(func) => {
+                    let f = Token::GeneratorFunction(Function {
+                        lines: self.low_level(
+                            func.tmp_lines.clone(),
+                            func.start_ln.clone(),
+                            rng.gen_range(0..=i32::MAX),
+                        ),
+                        ..func
+                    });
+                    self.ast.push(f);
+                }
                 _ => {
                     self.ast.push(node.to_owned());
                 }
@@ -154,17 +176,15 @@ impl Lexer {
                         self.brackets.braces = 0;
                         self.brackets.round = 0;
                         self.brackets.square = 0;
-                        let syntax_fn = || {
-                            match fn_type {
-                                FunctionType::Function => {
-                                    log!(Syntax, "\nfn `name` (`arguments`) {\n`code`\n}");
-                                }
-                                FunctionType::Loop => {
-                                    log!(Syntax, "\nloop fn `name` (`arguments`) {\n`code`\n}");
-                                }
-                                FunctionType::Generator => {
-                                    log!(Syntax, "\ngen fn `name` (`arguments`) {\n`code`\n}");
-                                }
+                        let syntax_fn = || match fn_type {
+                            FunctionType::Function => {
+                                log!(Syntax, "\nfn `name` (`arguments`) {\n`code`\n}");
+                            }
+                            FunctionType::Loop => {
+                                log!(Syntax, "\nloop fn `name` (`arguments`) {\n`code`\n}");
+                            }
+                            FunctionType::Generator => {
+                                log!(Syntax, "\ngen fn `name` (`arguments`) {\n`code`\n}");
                             }
                         };
                         if let (Some(fn_name), Some(fn_op_br)) =
@@ -288,46 +308,32 @@ impl Lexer {
                                                     "}" => {
                                                         self.brackets.braces -= 1;
                                                         if self.brackets.braces == 0 {
+                                                            let func = Function {
+                                                                name: fn_name.to_owned(),
+                                                                arguments: args.clone(),
+                                                                return_type: return_type.clone(),
+                                                                lines: vec![],
+                                                                tmp_lines: fn_body.clone(),
+                                                                start_ln: line_number,
+                                                            };
                                                             match fn_type {
-                                                                FunctionType::Function=> {
+                                                                FunctionType::Function => {
                                                                     self.tmp_ast.push(
-                                                                        Token::Function(Function {
-                                                                            name: fn_name.to_owned(),
-                                                                            arguments: args.clone(),
-                                                                            return_type: return_type
-                                                                                .clone(),
-                                                                            lines: vec![],
-                                                                            tmp_lines: fn_body.clone(),
-                                                                            start_ln: line_number,
-                                                                        })
+                                                                        Token::Function(func),
                                                                     );
                                                                     function_parsed = true;
                                                                 }
                                                                 FunctionType::Loop => {
                                                                     self.tmp_ast.push(
-                                                                        Token::LoopFunction(Function {
-                                                                            name: fn_name.to_owned(),
-                                                                            arguments: args.clone(),
-                                                                            return_type: return_type
-                                                                            .clone(),
-                                                                            lines: vec![],
-                                                                            tmp_lines: fn_body.clone(),
-                                                                            start_ln: line_number,
-                                                                        })
+                                                                        Token::LoopFunction(func),
                                                                     );
                                                                     function_parsed = true;
                                                                 }
                                                                 FunctionType::Generator => {
                                                                     self.tmp_ast.push(
-                                                                        Token::GeneratorFunction(Function {
-                                                                            name: fn_name.to_owned(),
-                                                                            arguments: args.clone(),
-                                                                            return_type: return_type
-                                                                            .clone(),
-                                                                            lines: vec![],
-                                                                            tmp_lines: fn_body.clone(),
-                                                                            start_ln: line_number,
-                                                                        })
+                                                                        Token::GeneratorFunction(
+                                                                            func,
+                                                                        ),
                                                                     );
                                                                     function_parsed = true;
                                                                 }
@@ -377,14 +383,17 @@ impl Lexer {
                                 log!(Syntax, "global `name` = `value`");
                             }
                         };
-                        if let (Some(name), Some(equals)) =
-                            (string_iter.next(), string_iter.next())
+                        if let (Some(name), Some(equals)) = (string_iter.next(), string_iter.next())
                         {
                             //TODO: Check for multidiemensional Array
                             if equals == "=" {
                                 let expression: Vec<&String> = string_iter.clone().collect();
-                                while string_iter.peek().is_some() { string_iter.next(); };
-                                if expression.contains(&&"[".to_string()) && !expression.contains(&&"]".to_string()) {
+                                while string_iter.peek().is_some() {
+                                    string_iter.next();
+                                }
+                                if expression.contains(&&"[".to_string())
+                                    && !expression.contains(&&"]".to_string())
+                                {
                                     log!(LexerError, f("Creating a multiline Array with the let binding is not supported. Line: {line_number}"));
                                 } else {
                                     let exp = generate_expression(expression, line_number);
@@ -413,8 +422,7 @@ impl Lexer {
                         if let Some(two) = string_iter.next() {
                             if two == "include" {
                                 if let Some(path) = string_iter.next() {
-                                    self.tmp_ast
-                                        .push(Token::CImport(format!("#include {path}")));
+                                    self.tmp_ast.push(Token::CImport(format!("{path}")));
                                 } else {
                                     log!(LexerError, f("Expected `path` at line {line_number}"));
                                 }
@@ -454,14 +462,17 @@ impl Lexer {
                         let syntax = || {
                             log!(Syntax, "let `name` = `expression`");
                         };
-                        if let (Some(name), Some(equals)) =
-                            (string_iter.next(), string_iter.next())
+                        if let (Some(name), Some(equals)) = (string_iter.next(), string_iter.next())
                         {
                             //TODO: Check for multidiemensional Array
                             if equals == "=" {
                                 let expression: Vec<&String> = string_iter.clone().collect();
-                                while string_iter.peek().is_some() { string_iter.next(); };
-                                if expression.contains(&&"[".to_string()) && !expression.contains(&&"]".to_string()) {
+                                while string_iter.peek().is_some() {
+                                    string_iter.next();
+                                }
+                                if expression.contains(&&"[".to_string())
+                                    && !expression.contains(&&"]".to_string())
+                                {
                                     log!(LexerError, f("Creating a multiline Array with the let binding is not supported. Line: {line_number}"));
                                 } else {
                                     tokens.push(Token::Var(Let {
@@ -597,7 +608,9 @@ impl Lexer {
                     "yield" => {
                         if let Some(_) = string_iter.peek() {
                             let exp = string_iter.clone().collect();
-                            while string_iter.peek().is_some() { string_iter.next(); };
+                            while string_iter.peek().is_some() {
+                                string_iter.next();
+                            }
                             tokens.push(Token::Yield(generate_expression(exp, line_number)));
                         } else {
                             log!(
@@ -609,12 +622,14 @@ impl Lexer {
                     "return" => {
                         if let Some(_) = string_iter.peek() {
                             let exp = string_iter.clone().collect();
-                            while string_iter.peek().is_some() { string_iter.next(); };
+                            while string_iter.peek().is_some() {
+                                string_iter.next();
+                            }
                             tokens.push(Token::Return(generate_expression(exp, line_number)));
                         } else {
                             log!(
-                                    LexerError,
-                            f("Expected expression after `return` at line {line_number}")
+                                LexerError,
+                                f("Expected expression after `return` at line {line_number}")
                             );
                         }
                     }
@@ -625,7 +640,9 @@ impl Lexer {
                                     string_iter.next();
                                     if let Some(_) = string_iter.peek() {
                                         let exp = string_iter.clone().collect();
-                                        while string_iter.peek().is_some() { string_iter.next(); };
+                                        while string_iter.peek().is_some() {
+                                            string_iter.next();
+                                        }
                                         tokens.push(Token::Assign(token::Assign {
                                             var: string.to_owned(),
                                             exp: generate_expression(exp, line_number),
