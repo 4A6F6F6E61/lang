@@ -1,4 +1,5 @@
 #![cfg(test)]
+pub mod utils;
 
 mod general {
     use crate::lexer::Lexer;
@@ -15,16 +16,16 @@ mod general {
 
     #[test]
     fn cxx_testing() {
-        use crate::{log, printx, transpiler::Cxx, PrintT};
+        use crate::{log, printx, transpiler::*, PrintT};
 
-        let mut cxx = Cxx::new();
-        cxx.run("./testing.lang");
+        let cxx = &mut cxx::new();
+        run(cxx, "./testing.lang");
         log!(Info, f("\n{}", cxx.buffer));
     }
 }
 
 mod cxx {
-    use crate::test::test_cxx;
+    use crate::test::utils::test_cxx;
     #[test]
     fn expression() {
         test_cxx("expression");
@@ -58,34 +59,14 @@ mod cxx {
         test_cxx("generator");
     }
 }
-use {
-    crate::{log, printx, transpiler::Cxx, PrintT},
-    std::{fs::read_to_string, path::Path},
-};
 
-pub fn load_file<P>(file: P) -> Option<String>
-where
-    P: AsRef<Path>,
-{
-    let mut out = String::new();
-    if let Ok(code) = read_to_string(file) {
-        code.lines().for_each(|line| {
-            out.push_str(&format!("{}\n", line.trim()));
-        });
-        Some(out.clone())
-    } else {
-        log!(CXX, "Unable to read file");
-        None
-    }
-}
+mod functional {
+    #[test]
+    fn fn_cxx() {
+        use crate::{log, printx, transpiler::*, PrintT};
 
-fn test_cxx(test: &str) {
-    let mut cxx = Cxx::new();
-    cxx.run(&format!("./src/examples/{test}.lang"));
-    let mut code1 = String::from(cxx.buffer.trim());
-    code1.push_str("\n");
-    log!(Info, f("\n{code1}"));
-    if let Some(code2) = load_file(&format!("./src/examples/out/cxx/{test}.cxx")) {
-        assert_eq!(code1, code2);
+        let t = &mut cxx::new();
+        run(t, &format!("./src/examples/generator.lang"));
+        log!(Info, f("\n{}", t.buffer));
     }
 }
