@@ -4,7 +4,8 @@ WIP language that compiles to various programming languages like CXX (in the fut
 
 ## Planned features
 
-- [ ] Generator functions
+- [X] Generator functions
     - [X] function declaration with `gen fn [name]([args]): [return] {}`
-    - [ ] yield keyword
+    - [X] yield keyword
 - [ ] more transpiler targets
+
