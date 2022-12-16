@@ -168,6 +168,12 @@ pub fn function(this: &mut Transpiler, x: &Function, type_: FunctionType) {
                     this.buffer.push_str(&format!(")"));
                     semic = true;
                 }
+                Token::OpenSqBr(_) => {
+                    this.buffer.push_str(&format!("["));
+                }
+                Token::CloseSqBr(_) => {
+                    this.buffer.push_str(&format!("]"));
+                }
                 _ => {
                     log!(Error, "Unexpected Token");
                     dbg!(&token);

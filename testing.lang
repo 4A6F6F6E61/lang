@@ -7,21 +7,14 @@ fn print(msg: int): void {
     std::cout << msg << std::endl
 }
 
-fn main(): int {
-    let test = true
-    let idk = 1
-    if test {
-        let ifidk = 69
-        if test {
-            let idk2 = 99
-        }
-    }
-    print(idk)
-    test = 10 * 9
+gen fn test(): int {
+    yield 10
+    yield 666
 }
-// test test test test
-//loop fn main_two(test: args, test2: string) {
-//    loop {
-//        a cool
-//    }
-//}
+
+fn main(): int {
+    let array = test()
+    print(array[0])
+    print(array[1])
+    return 0
+}

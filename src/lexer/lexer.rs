@@ -578,7 +578,7 @@ impl Lexer {
                         self.brackets.square += 1;
                     }
                     "]" => {
-                        tokens.push(Token::OpenSqBr(Br::new(id, self.brackets.square)));
+                        tokens.push(Token::CloseSqBr(Br::new(id, self.brackets.square)));
                         self.brackets.square -= 1;
                     }
                     "(" => {
