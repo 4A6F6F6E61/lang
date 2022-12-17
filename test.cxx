@@ -7,17 +7,17 @@ std::cout << msg << std::endl ;
 }
 #include <vector>
 
-std::vector<int> test ()
+std::vector<int> gener ()
 {
 std::vector<int> dfjfjfdjfndjfnjd;
 dfjfjfdjfndjfnjd.push_back(10);
-dfjfjfdjfndjfnjd.push_back(666);
+dfjfjfdjfndjfnjd.push_back(10);
 return dfjfjfdjfndjfnjd;
 }
 int main ()
 {
-auto array = test();
-print (array [0 ]);
-print (array [1 ]);
-return 0;
+for(auto test:gener())
+{
+print (test );
+}
 }

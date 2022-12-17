@@ -17,6 +17,7 @@ pub enum Token {
     If(token::If),
     Else(token::Else),
     ElseIf(token::If),
+    For(token::For),
     End(token::Br),
     OpenSqBr(token::Br),
     CloseSqBr(token::Br),
@@ -81,6 +82,23 @@ pub mod token {
     #[derive(Clone, Debug, Deserialize, Serialize)]
     pub struct Loop {
         pub id: i32,
+    }
+    #[derive(Clone, Debug, Deserialize, Serialize)]
+    pub struct For {
+        pub id: i32,
+        pub level: i32,
+        pub var_name: String,
+        pub iter_exp: Expression,
+    }
+    impl For {
+        pub fn new(var_name: String, iter_exp: Expression, id: i32, level: i32) -> Self {
+            Self {
+                var_name,
+                iter_exp,
+                level,
+                id: id + level,
+            }
+        }
     }
     #[derive(Clone, Debug, Deserialize, Serialize)]
     pub struct Let {

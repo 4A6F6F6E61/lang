@@ -569,6 +569,58 @@ impl Lexer {
                             log!(LexerError, f("Expected `{{` or `if` at line {line_number}"));
                         }
                     }
+                    "for" => {
+                        let syntax = || {
+                            log!(
+                                Syntax,
+                                "\nfor `var_name` in `iterator/Expression` {\n   `code`\n}"
+                            );
+                        };
+                        if let Some(var_name) = string_iter.next() {
+                            let mut iter_exp: Vec<&String> = vec![];
+                            let mut then: bool = false;
+                            let mut _in: bool = false;
+                            if string_iter.peek().is_some()
+                                && string_iter.next().unwrap() == &"in".to_string()
+                            {
+                                while string_iter.peek().is_some() {
+                                    let nt = string_iter.next().unwrap();
+
+                                    if nt == "{" {
+                                        then = true;
+                                        self.brackets.braces += 1;
+                                        break;
+                                    }
+                                    iter_exp.push(nt);
+                                }
+                                if !then {
+                                    log!(LexerError, f("Expected `{{` at line {line_number}"));
+                                    syntax();
+                                } else {
+                                    if iter_exp.is_empty() {
+                                        log!(
+                                            LexerError,
+                                            f("Expected iterator or expression at line {line_number}")
+                                        );
+                                        syntax();
+                                    } else {
+                                        tokens.push(Token::For(For::new(
+                                            var_name.to_owned(),
+                                            generate_expression(iter_exp, line_number),
+                                            id,
+                                            self.brackets.braces,
+                                        )));
+                                    }
+                                }
+                            } else {
+                                log!(LexerError, f("Expected `in` at line {line_number}"));
+                                syntax();
+                            }
+                        } else {
+                            log!(LexerError, f("Expected var_name at line {line_number}"));
+                            syntax();
+                        }
+                    }
                     "}" => {
                         tokens.push(Token::End(Br::new(id, self.brackets.braces)));
                         self.brackets.braces -= 1;

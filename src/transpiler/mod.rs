@@ -126,6 +126,12 @@ pub fn function(this: &mut Transpiler, x: &Function, type_: FunctionType) {
                     this.buffer
                         .push_str(&format!("else if ({condition})\n{{\n"));
                 }
+                Token::For(_for) => {
+                    let var_name = _for.var_name.clone();
+                    let iter_exp = expression(this.clone().target_lang, _for.iter_exp.clone());
+                    this.buffer
+                        .push_str(&format!("for(auto {var_name}:{iter_exp})\n{{\n"));
+                }
                 Token::Assign(_assign) => {
                     let name = _assign.var.clone();
                     let exp = expression(this.clone().target_lang, _assign.exp.clone());
