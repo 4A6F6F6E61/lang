@@ -1,5 +1,7 @@
 #include <iostream>
 
+import java.io.idk
+
 global gtest = 10
 const ctest = 20
 

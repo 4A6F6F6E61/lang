@@ -19,6 +19,7 @@ pub fn lexer_error() {
 
 pub enum PrintT {
     Error,
+    LexerError,
     Lexer,
     Syntax,
     Info,
@@ -30,21 +31,25 @@ pub enum PrintT {
 
 pub fn printx(type_: PrintT, message: &str) {
     let prefix = match type_ {
-        PrintT::Error => format!("[Error]: ").red(),
-        PrintT::Info => format!("[Info]: ").green(),
-        PrintT::Syntax => format!("[Syntax]: ").yellow(),
-        PrintT::Lexer => format!("[Lexer]: ").blue(),
-        PrintT::Cpu => format!("[Cpu]: ").yellow(),
-        PrintT::Test => format!("[Test]: ").yellow(),
+        PrintT::Error => String::from("ERROR: ").red(),
+        PrintT::LexerError => String::from("LEXER: ").red(),
+        PrintT::Info => format!("INFO: ").green(),
+        PrintT::Syntax => format!("SYNTAX: ").yellow(),
+        PrintT::Lexer => format!("LEXER: ").blue(),
+        PrintT::Cpu => format!("CPU: ").yellow(),
+        PrintT::Test => format!("TEST: ").yellow(),
         PrintT::Clear => "".to_string().white(),
         // --------------
         // languages
         // --------------
-        PrintT::CXX => format!("[CXX]: ").yellow(),
+        PrintT::CXX => format!("CXX: ").yellow(),
     };
     match type_ {
         PrintT::Clear => {
             print!("{}{}", prefix, message);
+        }
+        PrintT::Error | PrintT::LexerError => {
+            eprintln!("{}{}", prefix, message)
         }
         _ => {
             print!("{}{}\n", prefix, message);
@@ -60,11 +65,11 @@ macro_rules! log {
         printx(PrintT::Error, $($str)*);
     };
     (LexerError, f($($format:tt)*)) => {
-        printx(PrintT::Error, format!($($format)*).as_str());
+        printx(PrintT::LexerError, format!($($format)*).as_str());
         lexer_error();
     };
     (LexerError, $($str:tt)*) => {
-        printx(PrintT::Error, $($str)*);
+        printx(PrintT::LexerError, $($str)*);
         lexer_error();
     };
     (Info, f($($format:tt)*)) => {
@@ -108,7 +113,16 @@ macro_rules! log {
         printx(PrintT::Test, format!($($format)*).as_str());
     };
     (Test, $($str:tt)*) => {
-
         printx(PrintT::Test, $($str)*);
+    };
+}
+
+#[macro_export]
+macro_rules! notwasm {
+    ($($x:tt)*) => {
+        #[cfg(not(target_arch = "wasm32"))]
+        {
+            $($x)*
+        }
     };
 }

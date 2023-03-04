@@ -11,7 +11,7 @@ mod general {
         let code =
             read_to_string("./testing.lang").expect("Should have been able to read the file");
         lexer.parse(code);
-        println!("{:#?}", lexer.ast);
+        //println!("{:#?}", lexer.ast);
     }
 
     #[test]

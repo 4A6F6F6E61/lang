@@ -1,8 +1,15 @@
 #![allow(dead_code)]
-//use indicatif::{ProgressBar, ProgressState, ProgressStyle};
-//use std::fmt::Write;
+#[cfg(not(target_arch = "wasm32"))]
 use {
-    crate::{lexer::*, lexer_error, log, printx, PrintT},
+    indicatif::{
+        ProgressBar,
+        ProgressState,
+        ProgressStyle
+    },
+    std::fmt::Write,
+};
+use {
+    crate::{lexer::*, lexer_error, log, printx, PrintT, notwasm},
     rand::Rng,
     std::vec,
 };
@@ -16,7 +23,10 @@ impl Lexer {
             tmp_ast: vec![],
             ast: vec![],
             strings: vec![],
-            //progress_bar: ProgressBar::new(10000),
+            #[cfg(not(target_arch = "wasm32"))]
+            progress_bar: ProgressBar::new(100),
+            #[cfg(not(target_arch = "wasm32"))]
+            progress: 0,
             brackets: Brackets {
                 round: 0,
                 square: 0,
@@ -27,7 +37,7 @@ impl Lexer {
     // --------------------------------
     // Progressbar setup
     // --------------------------------
-    /*#[cfg(not(target_arch = "wasm32"))]
+    #[cfg(not(target_arch = "wasm32"))]
     pub fn setup_pb(&mut self) {
         self.progress_bar.set_style(
             ProgressStyle::with_template(
@@ -44,7 +54,7 @@ impl Lexer {
     pub fn finish_pb(&mut self) {
         self.progress_bar
             .finish_with_message("Finished parsing tokens");
-    }*/
+    }
     // --------------------------------
     // String vector generation
     // --------------------------------
@@ -53,6 +63,11 @@ impl Lexer {
         let line_count = code.lines().count();
         if line_count != 0 {
             code.lines().enumerate().for_each(|(i, line)| {
+                notwasm! {
+                    self.progress_bar.set_position(
+                        ((i as f32/line_count as f32 * 100f32)*0.25) as u64
+                    );
+                }
                 let mut temp_string = String::new();
                 self.strings.push(vec![]);
                 let mut chars = line.chars().peekable();
@@ -105,10 +120,24 @@ impl Lexer {
     // --------------------------------
     pub fn parse(&mut self, code: String) {
         use super::token::*;
-        let mut rng = rand::thread_rng();
-        self.top_level(code);
+        
+        log!(Lexer, "Started parsing tokens...");
+        notwasm! {
+            self.setup_pb();
+        }
 
+        let mut rng = rand::thread_rng();
+        notwasm! {self.progress_bar.set_position(0);}
+        self.top_level(code);
+        let mut p = 1;
+        let len = self.tmp_ast.len();
         for node in self.tmp_ast.clone() {
+            notwasm! {
+                self.progress_bar.set_position(
+                    (((p as f32/len as f32 * 100f32)*0.5)+50f32) as u64
+                );
+                p += 1;
+            }
             match node {
                 Token::Function(func) => {
                     let f = Token::Function(Function {
@@ -148,6 +177,7 @@ impl Lexer {
                 }
             }
         }
+        notwasm! {self.progress_bar.set_position(10000);}
         if self.brackets.braces > 0 {}
     }
     pub fn top_level(&mut self, code: String) {
@@ -158,14 +188,22 @@ impl Lexer {
                                      // ------------------------------
         let mut line_iter = self.strings.iter().peekable();
         let mut line_number = 0;
+        let mut p = 1;
         let mut fn_type = FunctionType::Function;
+        let len = self.strings.len();
         while line_iter.peek().is_some() {
+            notwasm! {
+                self.progress_bar.set_position(
+                    (((p as f32/len as f32 * 100f32)*0.5)+25f32) as u64
+                );
+                p += 1;
+            }
             line_number += 1;
             let next_line = line_iter.next().unwrap();
             let mut string_iter = next_line.iter().peekable();
             while string_iter.peek().is_some() {
-                let str = string_iter.next().unwrap();
-                match str.as_str() {
+                let _str = string_iter.next().unwrap();
+                match _str.as_str() {
                     "loop" => {
                         fn_type = FunctionType::Loop;
                     }
@@ -377,7 +415,7 @@ impl Lexer {
                     }
                     "const" | "global" => {
                         let syntax = || {
-                            if str == "const" {
+                            if _str == "const" {
                                 log!(Syntax, "const `name` = `value`");
                             } else {
                                 log!(Syntax, "global `name` = `value`");
@@ -397,7 +435,7 @@ impl Lexer {
                                     log!(LexerError, f("Creating a multiline Array with the let binding is not supported. Line: {line_number}"));
                                 } else {
                                     let exp = generate_expression(expression, line_number);
-                                    if str == "const" {
+                                    if _str == "const" {
                                         self.tmp_ast.push(Token::Const(Let {
                                             name: name.to_owned(),
                                             exp,
@@ -433,7 +471,11 @@ impl Lexer {
                             log!(LexerError, f("Expected `something` at line {line_number}"));
                         }
                     }
-                    _ => {}
+                    "" => {}
+                    _ => {
+                        self.tmp_ast.push(Token::Unknown(_str.to_string()));
+                        log!(LexerError, f("Unexpected token {_str} at line {line_number}"));
+                    }
                 }
             }
         }

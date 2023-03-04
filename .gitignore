@@ -1,1 +1,10 @@
 /target
+
+# Visual Studio Code
+.vscode/
+
+# Visual Studio
+.vs/
+
+# IntelliJ
+.idea/

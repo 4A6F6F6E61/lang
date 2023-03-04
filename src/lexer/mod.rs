@@ -1,4 +1,5 @@
-//use indicatif::ProgressBar;
+#[cfg(not(target_arch = "wasm32"))]
+use indicatif::ProgressBar;
 use serde::{Deserialize, Serialize};
 mod lexer;
 
@@ -37,6 +38,7 @@ pub enum Token {
     CImport(String),
     Generic(String),
     Line(Vec<Token>),
+    Unknown(String),
     /**
      * Expression Tokens
      */
@@ -193,11 +195,14 @@ pub struct Brackets {
     pub braces: i32,
 }
 
-#[derive(Clone, Debug, Deserialize, Serialize)]
+#[derive(Clone, Debug)]
 pub struct Lexer {
     pub tmp_ast: Vec<Token>,
     pub ast: Vec<Token>,
     strings: Vec<Vec<String>>,
-    //progress_bar: ProgressBar,
+    #[cfg(not(target_arch = "wasm32"))]
+    progress_bar: ProgressBar,
+    #[cfg(not(target_arch = "wasm32"))]
+    progress: usize,
     brackets: Brackets,
 }
